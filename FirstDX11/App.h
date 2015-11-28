@@ -26,13 +26,13 @@ public:
 	virtual void Run();
 
 	// App event
-	virtual void OnActivated(CoreApplicationView^ coreAppView, IActivatedEventArgs^ args);
-	virtual void OnSuspending(Object^ sender, SuspendingEventArgs^ args);
-	virtual void OnResuming(Object^ sender, SuspendingEventArgs^ args);
+	void OnActivated(CoreApplicationView^ coreAppView, IActivatedEventArgs^ args);
+	void OnSuspending(Object^ sender, SuspendingEventArgs^ args);
+	void OnResuming(Object^ sender, SuspendingEventArgs^ args);
 
 	// Windows event
-	virtual void PointerPressed(CoreWindow^ window, PointerEventArgs^ args);
-	virtual void OnKeyDown(Windows::UI::Core::CoreWindow ^sender, Windows::UI::Core::KeyEventArgs ^args);
+	void PointerPressed(CoreWindow^ window, PointerEventArgs^ args);
+	void OnKeyDown(Windows::UI::Core::CoreWindow ^sender, Windows::UI::Core::KeyEventArgs ^args);
 	void OnClosed(Windows::UI::Core::CoreWindow ^sender, Windows::UI::Core::CoreWindowEventArgs ^args);
 };
 

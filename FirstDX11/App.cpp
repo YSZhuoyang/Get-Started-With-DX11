@@ -21,7 +21,7 @@ void App::Run()
 
 	while (!WindowClosed)
 	{
-		window->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessUntilQuit);
+		window->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
 
 		// Game code
 		game.Update();
