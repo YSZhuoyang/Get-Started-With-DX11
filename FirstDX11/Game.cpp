@@ -56,6 +56,16 @@ void Game::Initialize()
 
 	SetupBuffer();
 	InitPipeline();
+
+	// Setup view port
+	D3D11_VIEWPORT viewport = { 0 };
+
+	viewport.TopLeftX = 0;
+	viewport.TopLeftY = 0;
+	viewport.Width = window->Bounds.Width;
+	viewport.Height = window->Bounds.Height;
+
+	devCon->RSSetViewports(1, &viewport);
 }
 
 void Game::SetupBuffer()
@@ -94,6 +104,16 @@ void Game::InitPipeline()
 	// Set shaders
 	devCon->VSSetShader(vertexShader.Get(), nullptr, 0);
 	devCon->PSSetShader(pixelShader.Get(), nullptr, 0);
+
+	// Init input layout
+	D3D11_INPUT_ELEMENT_DESC ied[] =
+	{
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
+	};
+
+	// Create and set the input layout
+	dev->CreateInputLayout(ied, ARRAYSIZE(ied), VSFile->Data, VSFile->Length, &inputLayout);
+	devCon->IASetInputLayout(inputLayout.Get());
 }
 
 void Game::Update()
@@ -110,8 +130,16 @@ void Game::Render()
 	float color[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	devCon->ClearRenderTargetView(renderTarget.Get(), color);
 
-	// Rendering
+	// Set buffers
+	UINT stride = sizeof(VERTEX);
+	UINT offset = 0;
+	devCon->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
 
+	// Set primitive topology
+	devCon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	// Drawing
+	devCon->Draw(3, 0);
 
 	swapChain->Present(1, 0);
 }
