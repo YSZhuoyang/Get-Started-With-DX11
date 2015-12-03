@@ -30,5 +30,7 @@ public:
 	void InitPipeline();
 	void Update();
 	void Render();
+
+	bool CheckMSAASupport();
 };
 

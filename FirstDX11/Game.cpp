@@ -4,6 +4,7 @@
 #include <fstream>
 
 using namespace ShaderLoader;
+using namespace Windows::UI::Popups;
 
 
 void Game::Initialize()
@@ -36,6 +37,14 @@ void Game::Initialize()
 
 	ComPtr<IDXGIFactory2> idxgiFactory;
 	idxgiAdapter->GetParent(__uuidof(IDXGIFactory2), &idxgiFactory);
+	
+	// Check msaa support
+	if (!CheckMSAASupport())
+	{
+		MessageDialog dialog("Msaa is not supported!", "Notice!");
+		dialog.ShowAsync();
+		//return false;
+	}
 
 	// Set up swap chain
 	DXGI_SWAP_CHAIN_DESC1 scd = { 0 };
@@ -71,12 +80,16 @@ void Game::Initialize()
 void Game::SetupBuffer()
 {
 	ComPtr<ID3D11Texture2D> backBuffer;
-	swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
 
+	swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
 	dev->CreateRenderTargetView(backBuffer.Get(), nullptr, &renderTarget);
 
-	// Init vertex data
-	VERTEX vertices[] =
+	// Init depth buffer
+	D3D11_TEXTURE2D_DESC depthStencilDesc;
+	//depthStencilDesc.Width = 
+
+	// Init vertex data and buffer
+	VERTEX vertices[] = 
 	{
 		{ 0.0f, 0.5f, 0.0f },
 		{ 0.45f, -0.5f, 0.0f },
@@ -114,6 +127,15 @@ void Game::InitPipeline()
 	// Create and set the input layout
 	dev->CreateInputLayout(ied, ARRAYSIZE(ied), VSFile->Data, VSFile->Length, &inputLayout);
 	devCon->IASetInputLayout(inputLayout.Get());
+}
+
+bool Game::CheckMSAASupport()
+{
+	UINT m4mxMsaaQuality;
+
+	dev->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &m4mxMsaaQuality);
+
+	return m4mxMsaaQuality > 0;
 }
 
 void Game::Update()
