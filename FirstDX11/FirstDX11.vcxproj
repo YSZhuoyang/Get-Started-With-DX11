@@ -199,6 +199,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
+    <ClInclude Include="Content\utils\Helper.h" />
     <ClInclude Include="Content\utils\ShaderFileLoader.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="pch.h" />
