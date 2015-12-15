@@ -105,8 +105,8 @@
     <PackageCertificateKeyFile>FirstDX11App_TemporaryKey.pfx</PackageCertificateKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\Users\YuSZY\Desktop\assimp-3.1.1-win-binaries\assimp-3.1.1-win-binaries\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\YuSZY\Desktop\assimp-3.1.1-win-binaries\assimp-3.1.1-win-binaries\lib64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\YuSZY\Documents\Sources\DX\assimp-3.1.1-win-binaries\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\YuSZY\Documents\Sources\DX\assimp-3.1.1-win-binaries\lib64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <Link>

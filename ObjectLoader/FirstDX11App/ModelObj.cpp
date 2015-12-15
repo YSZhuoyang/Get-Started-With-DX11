@@ -7,7 +7,7 @@ ModelObj::ModelObj()
 }
 
 
-bool ModelObj::LoadMesh(const string& fileName)
+bool ModelObj::LoadMesh( string& fileName)
 {
 	bool loadedSuccessfully;
 	Assimp::Importer importer;

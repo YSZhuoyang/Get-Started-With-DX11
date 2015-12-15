@@ -16,7 +16,7 @@ ref class ModelObj sealed
 {
 public:
 	ModelObj();
-	bool LoadMesh(const string& fileName);
+	bool LoadMesh( string& fileName);
 	void Render();
 
 private:

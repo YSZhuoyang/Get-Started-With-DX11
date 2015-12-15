@@ -22,6 +22,11 @@ namespace ShaderDataStructure
 			pos.z = z;
 		}
 
+		Vertex(XMFLOAT3 inputPos)
+		{
+			pos = inputPos;
+		}
+
 		XMFLOAT3 pos;
 		//XMFLOAT3 color;
 	};
