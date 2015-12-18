@@ -2,6 +2,8 @@
 
 #include <ppltasks.h>	// For create_task
 
+using namespace std;
+
 namespace DX
 {
 	inline void ThrowIfFailed(HRESULT hr)
@@ -38,6 +40,11 @@ namespace DX
 	{
 		static const float dipsPerInch = 96.0f;
 		return floorf(dips * dpi / dipsPerInch + 0.5f); // Round to nearest integer.
+	}
+
+	inline void PrintTab(string str)
+	{
+		OutputDebugStringA((str + "\n").c_str());
 	}
 
 #if defined(_DEBUG)

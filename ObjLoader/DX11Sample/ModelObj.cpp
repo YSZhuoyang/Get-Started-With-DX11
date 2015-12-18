@@ -1,40 +1,52 @@
 #include "pch.h"
+#include <ppltasks.h>
+#include <fstream>
+#include <string>
+
 #include "ModelObj.h"
+#include "CustomStream.h"
+#include "ShaderFileLoader.h"
 
 using namespace Custom;
 using namespace DirectX;
 using namespace DX;
-
+using namespace std;
+using namespace Windows;
 
 ModelObj::ModelObj()
 {
-	device = m_deviceResources->GetD3DDevice();
-	context = m_deviceResources->GetD3DDeviceContext();
+	//device = m_deviceResources->GetD3DDevice();
+	//context = m_deviceResources->GetD3DDeviceContext();
 }
 
-void ModelObj::LoadMesh(const string& fileName)
+void ModelObj::LoadMesh(const char* fileName)
 {
 	//Clear();
 
+	// create a SdkManager
 	FbxManager* fbxManager = FbxManager::Create();
+	// create an IOSettings object
 	FbxIOSettings* ios = FbxIOSettings::Create(fbxManager, IOSROOT);
-
-	// Create importer
+	// create an empty scene
+	FbxScene* scene = FbxScene::Create(fbxManager, "myScene");
+	// create an importer.
 	FbxImporter* importer = FbxImporter::Create(fbxManager, "");
 
 	// Use the first argument as the filename for the importer
-	if (!importer->Initialize(fileName.c_str, -1, fbxManager->GetIOSettings()))
+	if (!importer->Initialize(fileName, -1, fbxManager->GetIOSettings()))
 	{
 		string debug_message = "Call to FbxImporter::Initialize() failed.\n";
 		string error = importer->GetStatus().GetErrorString();
 
-		OutputDebugString((debug_message + error).c_str);
-		exit(-1);
+		OutputDebugStringA((debug_message + error).c_str());
+	}
+	
+	// import the scene.
+	if (!importer->Import(scene))
+	{
+		OutputDebugStringA("import failed");
 	}
 
-	// Create scene and import content of the file into the scene
-	FbxScene* scene = FbxScene::Create(fbxManager, "myScene");
-	importer->Import(scene);
 	importer->Destroy();
 
 	// Obtain root node
@@ -44,7 +56,7 @@ void ModelObj::LoadMesh(const string& fileName)
 	{
 		for (int i = 0; i < root->GetChildCount(); i++)
 		{
-			//PrintNode(root->GetChild(i));
+			PrintNode(root->GetChild(i));
 
 			// Create meshes
 
@@ -52,7 +64,6 @@ void ModelObj::LoadMesh(const string& fileName)
 	}
 
 	fbxManager->Destroy();
-
 	//size_t nFaces = objLoader->indices.size() / 3;
 	//size_t nVerts = objLoader->vertices.size();
 }
@@ -243,12 +254,98 @@ void ModelObj::Render()
 	
 }
 
+void ModelObj::PrintNode(FbxNode* node)
+{
+	PrintTab("/Node");
+
+	const char* nodeName = node->GetName();
+	FbxDouble3 translation = node->LclTranslation.Get();
+	FbxDouble3 rotation = node->LclRotation.Get();
+	FbxDouble3 scaling = node->LclScaling.Get();
+
+	// Print contents of the node
+	OutputDebugStringA(("Position: " +
+		to_string(translation[0]) + ", " +
+		to_string(translation[1]) + ", " +
+		to_string(translation[2]) + ";\n").c_str());
+	OutputDebugStringA(("Position: " +
+		to_string(rotation[0]) + ", " +
+		to_string(rotation[1]) + ", " +
+		to_string(rotation[2]) + ";\n").c_str());
+	OutputDebugStringA(("Position: " +
+		to_string(scaling[0]) + ", " +
+		to_string(scaling[1]) + ", " +
+		to_string(scaling[2]) + ";\n").c_str());
+
+	for (int i = 0; i < node->GetNodeAttributeCount(); i++)
+	{
+		PrintNodeAttribute(node->GetNodeAttributeByIndex(i));
+	}
+
+	for (int i = 0; i < node->GetChildCount(); i++)
+	{
+		PrintNode(node->GetChild(i));
+	}
+
+	PrintTab("/Node");
+}
+
+void ModelObj::PrintNodeAttribute(FbxNodeAttribute* attr)
+{
+	if (!attr)
+	{
+		return;
+	}
+
+	//FbxString typeName = GetAttributeTypeName(attr->GetAttributeType());
+	string attrName = attr->GetName();
+
+	OutputDebugStringA(attrName.c_str());
+	//OutputDebugStringA(typeName.Buffer());
+}
+
+FbxString GetAttributeTypeName(FbxNodeAttribute::EType type)
+{
+	switch (type)
+	{
+		case FbxNodeAttribute::eUnknown: return "unidentified";
+		case FbxNodeAttribute::eNull: return "null";
+		case FbxNodeAttribute::eMarker: return "marker";
+		case FbxNodeAttribute::eSkeleton: return "skeleton";
+		case FbxNodeAttribute::eMesh: return "mesh";
+		case FbxNodeAttribute::eNurbs: return "nurbs";
+		case FbxNodeAttribute::ePatch: return "patch";
+		case FbxNodeAttribute::eCamera: return "camera";
+		case FbxNodeAttribute::eCameraStereo: return "stereo";
+		case FbxNodeAttribute::eCameraSwitcher: return "camera switcher";
+		case FbxNodeAttribute::eLight: return "light";
+		case FbxNodeAttribute::eOpticalReference: return "optical reference";
+		case FbxNodeAttribute::eOpticalMarker: return "marker";
+		case FbxNodeAttribute::eNurbsCurve: return "nurbs curve";
+		case FbxNodeAttribute::eTrimNurbsSurface: return "trim nurbs surface";
+		case FbxNodeAttribute::eBoundary: return "boundary";
+		case FbxNodeAttribute::eNurbsSurface: return "nurbs surface";
+		case FbxNodeAttribute::eShape: return "shape";
+		case FbxNodeAttribute::eLODGroup: return "lodgroup";
+		case FbxNodeAttribute::eSubDiv: return "subdiv";
+		default: return "unknown";
+	}
+}
+
 void ModelObj::Clear()
 {
 
 }
 
-bool ModelObj::MeshEntry::Init(const vector<Vertex>& Vertices, const vector<int>& indices)
+int ModelObj::testImport()
+{
+	
+
+	return 0;
+}
+
+bool ModelObj::MeshEntry::Init(const vector<Vertex>& Vertices, 
+	const vector<int>& indices)
 {
 	return true;
 }

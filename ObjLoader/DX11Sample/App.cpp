@@ -1,9 +1,11 @@
 ﻿#include "pch.h"
 #include "App.h"
+#include "ModelObj.h"
 
 #include <ppltasks.h>
 
 using namespace DX11Sample;
+using namespace Custom;
 
 using namespace concurrency;
 using namespace Windows::ApplicationModel;
@@ -52,6 +54,11 @@ void App::Initialize(CoreApplicationView^ applicationView)
 	// At this point we have access to the device. 
 	// We can create the device-dependent resources.
 	m_deviceResources = std::make_shared<DX::DeviceResources>();
+
+
+	// Test object loader
+	ModelObj model;
+	model.LoadMesh("Assets\\Wooden_House.fbx");
 }
 
 // Called when the CoreWindow object is created (or re-created).

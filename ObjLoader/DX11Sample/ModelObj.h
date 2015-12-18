@@ -19,13 +19,17 @@ namespace Custom
 	{
 	public:
 		ModelObj();
-		void LoadMesh(const string& fileName);
+		void LoadMesh(const char* fileName);
 		void Render();
 
 	private:
 		void InitFromScene(const string& fileName);
 		void InitMesh(unsigned int index);
 		void InitMaterials(const string& fileName);
+		void PrintNode(FbxNode* node);
+		void PrintNodeAttribute(FbxNodeAttribute* attr);
+		FbxString GetAttributeTypeName(FbxNodeAttribute::EType type);
+		int testImport();
 		void Clear();
 
 #define INVALID_MATERIAL 0xFFFFFFFF

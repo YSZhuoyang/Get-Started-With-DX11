@@ -78,6 +78,10 @@
     <ClInclude Include="ModelObj.h">
       <Filter>Content</Filter>
     </ClInclude>
+    <ClInclude Include="CustomStream.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="shaderfileloader.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\StoreLogo.png">
@@ -89,6 +93,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="DX11Sample_TemporaryKey.pfx" />
-    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <MeshContentTask Include="Wooden_House.fbx">
+      <Filter>Assets</Filter>
+    </MeshContentTask>
   </ItemGroup>
 </Project>
