@@ -1,11 +1,8 @@
 #include "pch.h"
 #include <ppltasks.h>
-#include <fstream>
 #include <string>
 
 #include "ModelObj.h"
-#include "CustomStream.h"
-#include "ShaderFileLoader.h"
 
 using namespace Custom;
 using namespace DirectX;
@@ -19,8 +16,10 @@ ModelObj::ModelObj()
 	//context = m_deviceResources->GetD3DDeviceContext();
 }
 
-void ModelObj::LoadMesh(const char* fileName)
+void ModelObj::LoadModel(const char* fileName)
 {
+	PrintTab("Start load file");
+
 	//Clear();
 
 	// create a SdkManager
@@ -40,7 +39,7 @@ void ModelObj::LoadMesh(const char* fileName)
 
 		OutputDebugStringA((debug_message + error).c_str());
 	}
-	
+
 	// import the scene.
 	if (!importer->Import(scene))
 	{
@@ -49,81 +48,198 @@ void ModelObj::LoadMesh(const char* fileName)
 
 	importer->Destroy();
 
+	// Triangulate all geometries
+	FbxGeometryConverter lGeomConverter(fbxManager);
+	
+	if (lGeomConverter.Triangulate(scene, /*replace*/true))
+	{
+		PrintTab("Triangulated");
+	}
+
+	LoadMesh(scene);
+
+	fbxManager->Destroy();
+
+	PrintTab("End load file");
+}
+
+void ModelObj::LoadMesh(FbxScene* scene)
+{
+	PrintTab("Start load meshes");
+
 	// Obtain root node
 	FbxNode* root = scene->GetRootNode();
 
 	if (root)
 	{
-		for (int i = 0; i < root->GetChildCount(); i++)
+		numMeshes = root->GetChildCount(true);
+
+		entries.clear();
+		entries.reserve(numMeshes + 1);
+
+		PrintTab("Number of meshes: " + to_string(numMeshes));
+
+		LoadNodeMesh(root);
+
+		/*unsigned int numChild = root->GetChildCount();
+
+		for (unsigned int i = 0; i < numChild; i++)
 		{
-			PrintNode(root->GetChild(i));
-
-			// Create meshes
-
-		}
+			LoadNodeMesh(root->GetChild(i));
+		}*/
 	}
 
-	fbxManager->Destroy();
-	//size_t nFaces = objLoader->indices.size() / 3;
-	//size_t nVerts = objLoader->vertices.size();
+	PrintTab("End load meshes");
 }
 
-void ModelObj::InitFromScene(const string& fileName)
+void ModelObj::LoadNodeMesh(FbxNode* node)
 {
-	//entries.resize(pScene->mNumMeshes);
-	//textures.resize(pScene->mNumMaterials);
+	unsigned int numPolygons = 0;
+	unsigned int numVertices = 0;
+	unsigned int numIndices = 0;
+	unsigned int numPolygonVert = 0;
 
-	/*for (unsigned int i = 0; i < entries.size(); i++)
+	if (node->GetNodeAttribute() != NULL &&
+		node->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eMesh)
 	{
-		const aiMesh* paiMesh = pScene->mMeshes[i];
-		InitMesh(i, paiMesh);
-	}*/
+		//PrintNode(node);
+		
+		// Create meshes
+		FbxMesh* fbxMesh = node->GetMesh();
+		numPolygons = fbxMesh->GetPolygonCount();
+		numIndices = fbxMesh->GetPolygonVertexCount();
+		numVertices = fbxMesh->GetControlPointsCount();
 
-	D3D11_INPUT_ELEMENT_DESC inputDesc[] = 
+		/*if (numVertices == 0)
+		{
+			PrintTab("Empty mesh");
+
+			continue;
+		}
+
+		for (int i = 0; i < numPolygons; i++)
+		{
+			PrintTab(to_string(fbxMesh->GetPolygonSize(i)));
+		}*/
+
+		vector<Vertex> vertices(numVertices);
+		vector<int> indices(numIndices);
+
+		numPolygonVert = 3;
+		//assert(numPolygonVert == 3);
+
+		FbxVector4* controlPoints = fbxMesh->GetControlPoints();
+		int* indices_array = fbxMesh->GetPolygonVertices();
+
+		// Need to be changed for optimization
+		for (int i = 0; i < numIndices; i++)
+		{
+			indices[i] = indices_array[i];
+		}
+
+		for (unsigned int i = 0; i < numVertices; i++)
+		{
+			/*Vertex v(
+			(float)fbxMesh->GetControlPointAt(i).mData[0],
+			(float)fbxMesh->GetControlPointAt(i).mData[1],
+			(float)fbxMesh->GetControlPointAt(i).mData[2]);*/
+			//(float)controlPoints[i].mData[0],
+			//(float)controlPoints[i].mData[1],
+			//(float)controlPoints[i].mData[2]);
+
+			vertices[i].pos.x = (float)controlPoints[i].mData[0];// / 10000.0f;
+			vertices[i].pos.y = (float)controlPoints[i].mData[1];// / 10000.0f;
+			vertices[i].pos.z = (float)controlPoints[i].mData[2];// / 10000.0f;
+		}
+
+		//OutputDebugStringA(("\n number of polygons: " + to_string(numPolygons) + " \n").c_str());
+		//OutputDebugStringA(("\n number of indices: " + to_string(numIndices) + " \n").c_str());
+		//OutputDebugStringA(("\n number of vertices: " + to_string(vertices.size()) + " \n").c_str());
+
+		/* This method does not use index drawing
+		for (unsigned int i = 0; i < numPolygons; i++)
+		{
+			numPolygonVert = fbxMesh->GetPolygonSize(i);
+			assert(numPolygonVert == 3);
+
+			for (unsigned int j = 0; j < numPolygonVert; j++)
+			{
+				int controlPointIndex = fbxMesh->GetPolygonVertex(i, j);
+				Vertex v(
+					(float)controlPoints[controlPointIndex].mData[0],
+					(float)controlPoints[controlPointIndex].mData[0],
+					(float)controlPoints[controlPointIndex].mData[0]);
+				vertices.push_back(v);
+			}
+		}*/
+
+		MeshEntry mesh;
+		mesh.vertices = vertices;
+		mesh.indices = indices;
+		mesh.numVertices = vertices.size();
+		mesh.numIndices = indices.size();
+
+		entries.push_back(mesh);
+	}
+
+	for (unsigned int i = 0; i < node->GetChildCount(); i++)
+	{
+		LoadNodeMesh(node->GetChild(i));
+	}
+}
+
+void ModelObj::MeshEntry::InitResources(ID3D11Device3* device)
+{
+	PrintTab("Start init resources of a mesh");
+
+	/*D3D11_INPUT_ELEMENT_DESC inputDesc[] = 
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA}
-	};
+	};*/
 
-	//device->CreateInputLayout()
+	//device->CreateInputLayout();
 
-	//return InitMaterials(pScene, fileName);
+	// Create vertex buffer
+	D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+	vertexBufferData.pSysMem = &vertices[0];
+	vertexBufferData.SysMemPitch = 0;
+	vertexBufferData.SysMemSlicePitch = 0;
+	CD3D11_BUFFER_DESC vertexBufferDesc(numVertices * sizeof(Vertex), D3D11_BIND_VERTEX_BUFFER);
+	DX::ThrowIfFailed(
+		device->CreateBuffer(
+			&vertexBufferDesc,
+			&vertexBufferData,
+			&vertexBuffer
+			)
+		);
+
+	// Create index buffer
+	D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+	indexBufferData.pSysMem = &indices[0];
+	indexBufferData.SysMemPitch = 0;
+	indexBufferData.SysMemSlicePitch = 0;
+	CD3D11_BUFFER_DESC indexBufferDesc(numIndices * 4, D3D11_BIND_INDEX_BUFFER);
+	DX::ThrowIfFailed(
+		device->CreateBuffer(
+			&indexBufferDesc,
+			&indexBufferData,
+			&indexBuffer
+			)
+		);
+
+	PrintTab("End init resources of a mesh");
 }
 
-void ModelObj::InitMesh(unsigned int index)
+void ModelObj::InitMesh(ID3D11Device3* device)
 {
-	/*entries[index].materialIndex = paiMesh->mMaterialIndex;
+	PrintTab("Start init mesh");
 
-	vector<Vertex> vertices;
-	vector<int> indices;
-
-	const aiVector3D Zero3D(0.0f, 0.0f, 0.0f);
-
-	for (unsigned int i = 0; i < paiMesh->mNumVertices; i++)
+	for (unsigned int i = 0; i < entries.size(); i++)
 	{
-		const aiVector3D* pPos = &(paiMesh->mVertices[i]);
-		const aiVector3D* pNormal = paiMesh->HasNormals() ?
-			&(paiMesh->mNormals[i]) : &Zero3D;
-		const aiVector3D* pTexCoord = paiMesh->HasTextureCoords(0) ?
-			&(paiMesh->mTextureCoords[0][i]) : &Zero3D;
-
-		Vertex v(pPos->x, pPos->y, pPos->z);
-		// TexCoords, Normals ...
-
-		vertices.push_back(v);
+		entries[i].InitResources(device);
 	}
 
-	for (unsigned int i = 0; i < paiMesh->mNumFaces; i++)
-	{
-		const aiFace& face = paiMesh->mFaces[i];
-
-		assert(face.mNumIndices == 3);
-
-		indices.push_back(face.mIndices[0]);
-		indices.push_back(face.mIndices[1]);
-		indices.push_back(face.mIndices[2]);
-	}
-
-	entries[index].Init(vertices, indices);*/
+	PrintTab("End init mesh");
 }
 
 void ModelObj::InitMaterials(const string& fileName)
@@ -222,36 +338,39 @@ void ModelObj::InitMaterials(const string& fileName)
 	return initSuccessfully;*/
 }
 
-void ModelObj::Render()
+void ModelObj::Render(ID3D11DeviceContext3* context)
 {
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
 
-	//for (unsigned int i = 0; i < entries.size; i++)
-	for (vector<MeshEntry>::iterator it = entries.begin(); it != entries.end(); ++it)
+	//for (unsigned int i = 0; i < entries.size(); i++)
+	for (vector<MeshEntry>::iterator mesh = entries.begin(); mesh != entries.end(); ++mesh)
 	{
 		//MeshEntry mesh = entries[i];
 
-		/*context->IASetVertexBuffers(
+		context->IASetVertexBuffers(
 			0,
 			1,
-			vertexBuffer.GetAddressOf(),
+			mesh->vertexBuffer.GetAddressOf(),
 			&stride,
 			&offset
 			);
 
 		context->IASetIndexBuffer(
-			indexBuffer.Get(),
+			mesh->indexBuffer.Get(),
 			DXGI_FORMAT_R16_UINT, // Each index is one 16-bit unsigned integer (short).
 			0
 			);
 
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		context->IASetInputLayout(inputLayout.Get());*/
+		//context->IASetInputLayout(mesh->inputLayout.Get());
+
+		context->DrawIndexed(
+			mesh->numIndices,
+			0,
+			0);
 	}
-	
-	
 }
 
 void ModelObj::PrintNode(FbxNode* node)
@@ -262,17 +381,18 @@ void ModelObj::PrintNode(FbxNode* node)
 	FbxDouble3 translation = node->LclTranslation.Get();
 	FbxDouble3 rotation = node->LclRotation.Get();
 	FbxDouble3 scaling = node->LclScaling.Get();
+	//node->SetGeometricScaling(FbxNode::eDESTINATION_SET, node->GetGeometricScaling(FbxNode::eSOURCE_SET));
 
 	// Print contents of the node
 	OutputDebugStringA(("Position: " +
 		to_string(translation[0]) + ", " +
 		to_string(translation[1]) + ", " +
 		to_string(translation[2]) + ";\n").c_str());
-	OutputDebugStringA(("Position: " +
+	OutputDebugStringA(("Rotation: " +
 		to_string(rotation[0]) + ", " +
 		to_string(rotation[1]) + ", " +
 		to_string(rotation[2]) + ";\n").c_str());
-	OutputDebugStringA(("Position: " +
+	OutputDebugStringA(("Scaling: " +
 		to_string(scaling[0]) + ", " +
 		to_string(scaling[1]) + ", " +
 		to_string(scaling[2]) + ";\n").c_str());
@@ -296,12 +416,13 @@ void ModelObj::PrintNodeAttribute(FbxNodeAttribute* attr)
 	{
 		return;
 	}
-
-	//FbxString typeName = GetAttributeTypeName(attr->GetAttributeType());
+	
+	//Doesn't support UWP API
+	//string typeName = GetAttributeTypeName(attr->GetAttributeType());
 	string attrName = attr->GetName();
 
-	OutputDebugStringA(attrName.c_str());
-	//OutputDebugStringA(typeName.Buffer());
+	OutputDebugStringA(("\nAttr type: " + to_string(attr->GetAttributeType()) + "\n").c_str());
+	OutputDebugStringA(("Attr name: " + attrName + "\n").c_str());
 }
 
 FbxString GetAttributeTypeName(FbxNodeAttribute::EType type)
@@ -337,17 +458,16 @@ void ModelObj::Clear()
 
 }
 
-int ModelObj::testImport()
+/*void ModelObj::MeshEntry::Init(
+	const vector<Vertex>& Vertices, 
+	const vector<int>& Indices, 
+	double NumVertices, 
+	double NumIndices)
 {
-	
-
-	return 0;
-}
-
-bool ModelObj::MeshEntry::Init(const vector<Vertex>& Vertices, 
-	const vector<int>& indices)
-{
-	return true;
-}
+	vertices = Vertices;
+	indices = Indices;
+	numVertices = NumVertices;
+	numIndices = NumIndices;
+}*/
 
 

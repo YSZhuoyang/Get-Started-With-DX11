@@ -81,7 +81,6 @@
     <ClInclude Include="CustomStream.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="shaderfileloader.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\StoreLogo.png">
@@ -96,6 +95,9 @@
   </ItemGroup>
   <ItemGroup>
     <MeshContentTask Include="Wooden_House.fbx">
+      <Filter>Assets</Filter>
+    </MeshContentTask>
+    <MeshContentTask Include="..\Debug\DX11Sample\AppX\Assets\starwars-millennium-falcon.fbx">
       <Filter>Assets</Filter>
     </MeshContentTask>
   </ItemGroup>

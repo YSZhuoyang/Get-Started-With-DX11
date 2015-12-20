@@ -215,7 +215,6 @@
     <ClInclude Include="Content\ShaderStructures.h" />
     <ClInclude Include="ModelObj.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="shaderfileloader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
@@ -248,6 +247,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <MeshContentTask Include="..\Debug\DX11Sample\AppX\Assets\starwars-millennium-falcon.fbx" />
     <MeshContentTask Include="Wooden_House.fbx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

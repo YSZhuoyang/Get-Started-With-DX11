@@ -4,6 +4,11 @@
 #include "ShaderStructures.h"
 #include "..\Common\StepTimer.h"
 
+#include "ModelObj.h"
+
+using namespace Custom;
+
+
 namespace DX11Sample
 {
 	// This sample renderer instantiates a basic rendering pipeline.
@@ -40,6 +45,9 @@ namespace DX11Sample
 		// System resources for cube geometry.
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
 		uint32	m_indexCount;
+
+		// Test object loader
+		ModelObj model;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;

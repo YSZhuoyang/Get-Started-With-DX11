@@ -56,9 +56,7 @@ void App::Initialize(CoreApplicationView^ applicationView)
 	m_deviceResources = std::make_shared<DX::DeviceResources>();
 
 
-	// Test object loader
-	ModelObj model;
-	model.LoadMesh("Assets\\Wooden_House.fbx");
+	
 }
 
 // Called when the CoreWindow object is created (or re-created).

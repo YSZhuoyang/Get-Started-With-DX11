@@ -19,7 +19,7 @@ namespace DX11Sample
 
 	struct Vertex
 	{
-		Vertex(float x, float y, float z)
+		/*Vertex(float x, float y, float z)
 		{
 			pos.x = x;
 			pos.y = y;
@@ -29,7 +29,7 @@ namespace DX11Sample
 		Vertex(DirectX::XMFLOAT3 inputPos)
 		{
 			pos = inputPos;
-		}
+		}*/
 
 		DirectX::XMFLOAT3 pos;
 		//XMFLOAT3 color;

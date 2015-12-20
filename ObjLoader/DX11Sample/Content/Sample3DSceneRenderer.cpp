@@ -58,8 +58,10 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 		);
 
 	// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
-	static const XMVECTORF32 eye = { 0.0f, 0.7f, 1.5f, 0.0f };
+	static const XMVECTORF32 eye = { 0.0f, 0.7f, 3.0f, 0.0f };
+	//static const XMVECTORF32 eye = { 1.0f, 2.0f, 10.5f, 0.0f };
 	static const XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
+	//static const XMVECTORF32 at = { 1.0f, 1.0f, 1.0f, 0.0f };
 	static const XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
 
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtRH(eye, at, up)));
@@ -110,10 +112,10 @@ void Sample3DSceneRenderer::StopTracking()
 void Sample3DSceneRenderer::Render()
 {
 	// Loading is asynchronous. Only draw geometry after it's loaded.
-	if (!m_loadingComplete)
+	/*if (!m_loadingComplete)
 	{
 		return;
-	}
+	}*/
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
@@ -129,7 +131,8 @@ void Sample3DSceneRenderer::Render()
 		);
 
 	// Each vertex is one instance of the VertexPositionColor struct.
-	UINT stride = sizeof(VertexPositionColor);
+	//UINT stride = sizeof(VertexPositionColor);
+	/*UINT stride = sizeof(Vertex);
 	UINT offset = 0;
 	context->IASetVertexBuffers(
 		0,
@@ -143,7 +146,7 @@ void Sample3DSceneRenderer::Render()
 		m_indexBuffer.Get(),
 		DXGI_FORMAT_R16_UINT, // Each index is one 16-bit unsigned integer (short).
 		0
-		);
+		);*/
 
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -173,15 +176,22 @@ void Sample3DSceneRenderer::Render()
 		);
 
 	// Draw the objects.
-	context->DrawIndexed(
+	/*context->DrawIndexed(
 		m_indexCount,
 		0,
 		0
-		);
+		);*/
+
+	model.Render(context);
 }
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
+	// Test object loader
+	model.LoadModel("Assets\\Wooden_House.fbx");//"Assets\\starwars-millennium-falcon.fbx"
+
+
+
 	// Load shaders asynchronously.
 	auto loadVSTask = DX::ReadDataAsync(L"SampleVertexShader.cso");
 	auto loadPSTask = DX::ReadDataAsync(L"SamplePixelShader.cso");
@@ -197,16 +207,21 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 				)
 			);
 
-		static const D3D11_INPUT_ELEMENT_DESC vertexDesc [] =
+		/*static const D3D11_INPUT_ELEMENT_DESC inputDesc [] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		};*/
+
+		D3D11_INPUT_ELEMENT_DESC inputDesc[] =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA }
 		};
 
 		DX::ThrowIfFailed(
 			m_deviceResources->GetD3DDevice()->CreateInputLayout(
-				vertexDesc,
-				ARRAYSIZE(vertexDesc),
+				inputDesc,
+				ARRAYSIZE(inputDesc),
 				&fileData[0],
 				fileData.size(),
 				&m_inputLayout
@@ -236,7 +251,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 	});
 
 	// Once both shaders are loaded, create the mesh.
-	auto createCubeTask = (createPSTask && createVSTask).then([this] () {
+	/*auto createCubeTask = (createPSTask && createVSTask).then([this] () {
 
 		// Load mesh vertices. Each vertex has a position and a color.
 		static const VertexPositionColor cubeVertices[] = 
@@ -307,9 +322,31 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 	});
 
 	// Once the cube is loaded, the object is ready to be rendered.
-	createCubeTask.then([this] () {
+	/*createCubeTask.then([this] () {
 		m_loadingComplete = true;
-	});
+	});*/
+
+	// Test model loader
+	model.InitMesh(m_deviceResources->GetD3DDevice());
+
+	// Turn off cull back
+	ID3D11RasterizerState* m_rasterStateNoCulling;
+	D3D11_RASTERIZER_DESC rasterDesc;//D3D11_RASTERIZER_DESC2
+									 // Setup a raster description which turns off back face culling.
+	rasterDesc.AntialiasedLineEnable = false;
+	rasterDesc.CullMode = D3D11_CULL_BACK;//D3D11_CULL_NONE;
+	rasterDesc.DepthBias = 0;
+	rasterDesc.DepthBiasClamp = 0.0f;
+	rasterDesc.DepthClipEnable = true;
+	rasterDesc.FillMode = D3D11_FILL_SOLID;
+	rasterDesc.FrontCounterClockwise = true;
+	rasterDesc.MultisampleEnable = false;
+	rasterDesc.ScissorEnable = false;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+
+	// Create the no culling rasterizer state.
+	m_deviceResources->GetD3DDevice()->CreateRasterizerState(&rasterDesc, &m_rasterStateNoCulling);
+	m_deviceResources->GetD3DDeviceContext()->RSSetState(m_rasterStateNoCulling);
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources()

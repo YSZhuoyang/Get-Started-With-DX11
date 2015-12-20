@@ -44,7 +44,7 @@ namespace DX
 
 	inline void PrintTab(string str)
 	{
-		OutputDebugStringA((str + "\n").c_str());
+		OutputDebugStringA(("\n" + str + "\n").c_str());
 	}
 
 #if defined(_DEBUG)
