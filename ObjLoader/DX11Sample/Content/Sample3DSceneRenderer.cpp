@@ -112,10 +112,10 @@ void Sample3DSceneRenderer::StopTracking()
 void Sample3DSceneRenderer::Render()
 {
 	// Loading is asynchronous. Only draw geometry after it's loaded.
-	/*if (!m_loadingComplete)
+	if (!m_loadingComplete)
 	{
 		return;
-	}*/
+	}
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
@@ -129,26 +129,6 @@ void Sample3DSceneRenderer::Render()
 		0,
 		0
 		);
-
-	// Each vertex is one instance of the VertexPositionColor struct.
-	//UINT stride = sizeof(VertexPositionColor);
-	/*UINT stride = sizeof(Vertex);
-	UINT offset = 0;
-	context->IASetVertexBuffers(
-		0,
-		1,
-		m_vertexBuffer.GetAddressOf(),
-		&stride,
-		&offset
-		);
-
-	context->IASetIndexBuffer(
-		m_indexBuffer.Get(),
-		DXGI_FORMAT_R16_UINT, // Each index is one 16-bit unsigned integer (short).
-		0
-		);*/
-
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	context->IASetInputLayout(m_inputLayout.Get());
 
@@ -176,20 +156,16 @@ void Sample3DSceneRenderer::Render()
 		);
 
 	// Draw the objects.
-	/*context->DrawIndexed(
-		m_indexCount,
-		0,
-		0
-		);*/
-
 	model.Render(context);
 }
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
 	// Test object loader
-	model.LoadModel("Assets\\Wooden_House.fbx");//"Assets\\starwars-millennium-falcon.fbx"
-
+	model.LoadModel("Assets\\starwars-millennium-falcon.fbx");
+	//"Assets\\starwars-millennium-falcon.fbx"
+	//Assets\\wu.FBX
+	//Assets\\Wooden_House.fbx
 
 
 	// Load shaders asynchronously.
@@ -251,102 +227,35 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 	});
 
 	// Once both shaders are loaded, create the mesh.
-	/*auto createCubeTask = (createPSTask && createVSTask).then([this] () {
-
-		// Load mesh vertices. Each vertex has a position and a color.
-		static const VertexPositionColor cubeVertices[] = 
-		{
-			{XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, 0.0f)},
-			{XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f)},
-			{XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f)},
-			{XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 1.0f)},
-			{XMFLOAT3( 0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f)},
-			{XMFLOAT3( 0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 1.0f)},
-			{XMFLOAT3( 0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f)},
-			{XMFLOAT3( 0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f)},
-		};
-
-		D3D11_SUBRESOURCE_DATA vertexBufferData = {0};
-		vertexBufferData.pSysMem = cubeVertices;
-		vertexBufferData.SysMemPitch = 0;
-		vertexBufferData.SysMemSlicePitch = 0;
-		CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(cubeVertices), D3D11_BIND_VERTEX_BUFFER);
-		DX::ThrowIfFailed(
-			m_deviceResources->GetD3DDevice()->CreateBuffer(
-				&vertexBufferDesc,
-				&vertexBufferData,
-				&m_vertexBuffer
-				)
-			);
-
-		// Load mesh indices. Each trio of indices represents
-		// a triangle to be rendered on the screen.
-		// For example: 0,2,1 means that the vertices with indexes
-		// 0, 2 and 1 from the vertex buffer compose the 
-		// first triangle of this mesh.
-		static const unsigned short cubeIndices [] =
-		{
-			0,2,1, // -x
-			1,2,3,
-
-			4,5,6, // +x
-			5,7,6,
-
-			0,1,5, // -y
-			0,5,4,
-
-			2,6,7, // +y
-			2,7,3,
-
-			0,4,6, // -z
-			0,6,2,
-
-			1,3,7, // +z
-			1,7,5,
-		};
-
-		m_indexCount = ARRAYSIZE(cubeIndices);
-
-		D3D11_SUBRESOURCE_DATA indexBufferData = {0};
-		indexBufferData.pSysMem = cubeIndices;
-		indexBufferData.SysMemPitch = 0;
-		indexBufferData.SysMemSlicePitch = 0;
-		CD3D11_BUFFER_DESC indexBufferDesc(sizeof(cubeIndices), D3D11_BIND_INDEX_BUFFER);
-		DX::ThrowIfFailed(
-			m_deviceResources->GetD3DDevice()->CreateBuffer(
-				&indexBufferDesc,
-				&indexBufferData,
-				&m_indexBuffer
-				)
-			);
+	auto createModelTask = (createPSTask && createVSTask).then([this] ()
+	{
+		// Test model loader
+		model.InitMesh(m_deviceResources->GetD3DDevice());
 	});
 
 	// Once the cube is loaded, the object is ready to be rendered.
-	/*createCubeTask.then([this] () {
+	createModelTask.then([this] () {
 		m_loadingComplete = true;
-	});*/
-
-	// Test model loader
-	model.InitMesh(m_deviceResources->GetD3DDevice());
+	});
 
 	// Turn off cull back
-	ID3D11RasterizerState* m_rasterStateNoCulling;
+	/*ID3D11RasterizerState* m_rasterStateNoCulling;
 	D3D11_RASTERIZER_DESC rasterDesc;//D3D11_RASTERIZER_DESC2
 									 // Setup a raster description which turns off back face culling.
 	rasterDesc.AntialiasedLineEnable = false;
-	rasterDesc.CullMode = D3D11_CULL_BACK;//D3D11_CULL_NONE;
+	rasterDesc.CullMode = D3D11_CULL_NONE;
 	rasterDesc.DepthBias = 0;
 	rasterDesc.DepthBiasClamp = 0.0f;
 	rasterDesc.DepthClipEnable = true;
 	rasterDesc.FillMode = D3D11_FILL_SOLID;
-	rasterDesc.FrontCounterClockwise = true;
+	rasterDesc.FrontCounterClockwise = false;
 	rasterDesc.MultisampleEnable = false;
 	rasterDesc.ScissorEnable = false;
 	rasterDesc.SlopeScaledDepthBias = 0.0f;
 
 	// Create the no culling rasterizer state.
 	m_deviceResources->GetD3DDevice()->CreateRasterizerState(&rasterDesc, &m_rasterStateNoCulling);
-	m_deviceResources->GetD3DDeviceContext()->RSSetState(m_rasterStateNoCulling);
+	m_deviceResources->GetD3DDeviceContext()->RSSetState(m_rasterStateNoCulling);*/
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources()

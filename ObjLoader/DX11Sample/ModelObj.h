@@ -24,6 +24,7 @@ namespace Custom
 		void LoadNodeMesh(FbxNode* node);
 		void InitMesh(ID3D11Device3* device);
 		void Render(ID3D11DeviceContext3* context);
+		//void Release();
 
 	private:
 		void InitMaterials(const string& fileName);
@@ -47,12 +48,12 @@ namespace Custom
 			ComPtr<ID3D11Buffer> indexBuffer;
 			ComPtr<ID3D11InputLayout> m_inputLayout;
 
-			double numIndices;
-			double numVertices;
+			unsigned int numIndices;
+			unsigned int numVertices;
 			//unsigned int materialIndex;
 
 			vector<Vertex> vertices;
-			vector<int> indices;
+			vector<unsigned int> indices;
 
 			//D3D11_INPUT_ELEMENT_DESC vertexDesc[];
 		};
@@ -60,7 +61,7 @@ namespace Custom
 		// Cached pointer to device resources.
 		//std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
-		unsigned int numMeshes;
+		unsigned short numMeshes;
 
 		//ID3D11Device3* device;
 		//ID3D11DeviceContext3* context;

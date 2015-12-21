@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include <ppltasks.h>
 #include <string>
 
@@ -110,20 +110,13 @@ void ModelObj::LoadNodeMesh(FbxNode* node)
 		numIndices = fbxMesh->GetPolygonVertexCount();
 		numVertices = fbxMesh->GetControlPointsCount();
 
-		/*if (numVertices == 0)
-		{
-			PrintTab("Empty mesh");
-
-			continue;
-		}
-
-		for (int i = 0; i < numPolygons; i++)
+		/*for (int i = 0; i < numPolygons; i++)
 		{
 			PrintTab(to_string(fbxMesh->GetPolygonSize(i)));
 		}*/
 
 		vector<Vertex> vertices(numVertices);
-		vector<int> indices(numIndices);
+		vector<unsigned int> indices(numIndices);
 
 		numPolygonVert = 3;
 		//assert(numPolygonVert == 3);
@@ -139,17 +132,9 @@ void ModelObj::LoadNodeMesh(FbxNode* node)
 
 		for (unsigned int i = 0; i < numVertices; i++)
 		{
-			/*Vertex v(
-			(float)fbxMesh->GetControlPointAt(i).mData[0],
-			(float)fbxMesh->GetControlPointAt(i).mData[1],
-			(float)fbxMesh->GetControlPointAt(i).mData[2]);*/
-			//(float)controlPoints[i].mData[0],
-			//(float)controlPoints[i].mData[1],
-			//(float)controlPoints[i].mData[2]);
-
-			vertices[i].pos.x = (float)controlPoints[i].mData[0];// / 10000.0f;
-			vertices[i].pos.y = (float)controlPoints[i].mData[1];// / 10000.0f;
-			vertices[i].pos.z = (float)controlPoints[i].mData[2];// / 10000.0f;
+			vertices[i].pos.x = (float)controlPoints[i].mData[0] / 10000.0f;
+			vertices[i].pos.y = (float)controlPoints[i].mData[1] / 10000.0f;
+			vertices[i].pos.z = (float)controlPoints[i].mData[2] / 10000.0f;
 		}
 
 		//OutputDebugStringA(("\n number of polygons: " + to_string(numPolygons) + " \n").c_str());
@@ -176,8 +161,8 @@ void ModelObj::LoadNodeMesh(FbxNode* node)
 		MeshEntry mesh;
 		mesh.vertices = vertices;
 		mesh.indices = indices;
-		mesh.numVertices = vertices.size();
-		mesh.numIndices = indices.size();
+		mesh.numVertices = numVertices;
+		mesh.numIndices = numIndices;
 
 		entries.push_back(mesh);
 	}
@@ -218,7 +203,7 @@ void ModelObj::MeshEntry::InitResources(ID3D11Device3* device)
 	indexBufferData.pSysMem = &indices[0];
 	indexBufferData.SysMemPitch = 0;
 	indexBufferData.SysMemSlicePitch = 0;
-	CD3D11_BUFFER_DESC indexBufferDesc(numIndices * 4, D3D11_BIND_INDEX_BUFFER);
+	CD3D11_BUFFER_DESC indexBufferDesc(numIndices * sizeof(unsigned int), D3D11_BIND_INDEX_BUFFER);
 	DX::ThrowIfFailed(
 		device->CreateBuffer(
 			&indexBufferDesc,
@@ -244,98 +229,7 @@ void ModelObj::InitMesh(ID3D11Device3* device)
 
 void ModelObj::InitMaterials(const string& fileName)
 {
-	/*bool initSuccessfully = true;
 
-	for (unsigned int i = 0; i < pScene->mNumMaterials; i++)
-	{
-		const aiMaterial* pMaterial = pScene->mMaterials[i];
-
-		ComPtr<ID3D11Resource> resource;
-		//ComPtr<ID3D11Texture2D> texture;
-		ComPtr<ID3D11ShaderResourceView> srv;
-		
-		HRESULT hr = CreateDDSTextureFromFile(device,
-			L"SEAFLOOR.DDS", //fileName.c_str,
-			resource.GetAddressOf(), 
-			srv.GetAddressOf());
-
-		DX::ThrowIfFailed(hr);
-
-		D3D11_RESOURCE_DIMENSION resType = D3D11_RESOURCE_DIMENSION_UNKNOWN;
-		resource->GetType(&resType);
-
-		//resource.As(&texture);
-
-		switch (resType)
-		{
-			case D3D11_RESOURCE_DIMENSION_TEXTURE1D:
-			{
-				ComPtr<ID3D11Texture1D> tex;
-				hr = resource.As(&tex);
-				DX::ThrowIfFailed(hr);
-
-				D3D11_TEXTURE1D_DESC desc;
-				tex->GetDesc(&desc);
-
-				// This is a 1D texture. Check values of desc here
-			}
-			break;
-
-			case D3D11_RESOURCE_DIMENSION_TEXTURE2D:
-			{
-				ComPtr<ID3D11Texture2D> tex;
-				hr = resource.As(&tex);
-				DX::ThrowIfFailed(hr);
-
-				D3D11_TEXTURE2D_DESC desc;
-				tex->GetDesc(&desc);
-
-				//textures[i] = tex;
-
-				// This is a 2D texture. Check values of desc here
-			}
-			break;
-
-			case D3D11_RESOURCE_DIMENSION_TEXTURE3D:
-			{
-				ComPtr<ID3D11Texture3D> tex;
-				hr = resource.As(&tex);
-				DX::ThrowIfFailed(hr);
-
-				D3D11_TEXTURE3D_DESC desc;
-				tex->GetDesc(&desc);
-
-				// This is a 3D volume texture. Check values of desc here
-			}
-			break;
-
-			default:
-				// Error!
-				break;
-		}
-
-		/*textures[i] = NULL;
-		if (pMaterial->GetTextureCount(aiTextureType_DIFFUSE) > 0)
-		{
-		aiString path;
-
-		if (pMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &path,
-		NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS)
-		{
-		string fullPath = Dir + "/" + path.data;
-		textures[i] = new ID3D11Texture3D()...
-
-		if (!textures[i]->Load())
-		{
-		delete textures[i];
-		textures[i] = NULL;
-		initSuccessfully = false;
-		}
-		}
-		}*/
-	/*}
-
-	return initSuccessfully;*/
 }
 
 void ModelObj::Render(ID3D11DeviceContext3* context)
@@ -343,11 +237,8 @@ void ModelObj::Render(ID3D11DeviceContext3* context)
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
 
-	//for (unsigned int i = 0; i < entries.size(); i++)
 	for (vector<MeshEntry>::iterator mesh = entries.begin(); mesh != entries.end(); ++mesh)
 	{
-		//MeshEntry mesh = entries[i];
-
 		context->IASetVertexBuffers(
 			0,
 			1,
@@ -358,7 +249,7 @@ void ModelObj::Render(ID3D11DeviceContext3* context)
 
 		context->IASetIndexBuffer(
 			mesh->indexBuffer.Get(),
-			DXGI_FORMAT_R16_UINT, // Each index is one 16-bit unsigned integer (short).
+			DXGI_FORMAT_R32_UINT, // Each index is one 32-bit unsigned integer (short).
 			0
 			);
 
