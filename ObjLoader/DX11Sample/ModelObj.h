@@ -61,7 +61,7 @@ namespace Custom
 		// Cached pointer to device resources.
 		//std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
-		unsigned short numMeshes;
+		unsigned short numNodes;
 
 		//ID3D11Device3* device;
 		//ID3D11DeviceContext3* context;

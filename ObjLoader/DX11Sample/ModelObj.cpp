@@ -72,21 +72,15 @@ void ModelObj::LoadMesh(FbxScene* scene)
 
 	if (root)
 	{
-		numMeshes = root->GetChildCount(true);
+		// Root node is included
+		numNodes = root->GetChildCount(true) + 1;
 
 		entries.clear();
-		entries.reserve(numMeshes + 1);
+		entries.reserve(numNodes);
 
-		PrintTab("Number of meshes: " + to_string(numMeshes));
+		PrintTab("Number of nodes: " + to_string(numNodes));
 
 		LoadNodeMesh(root);
-
-		/*unsigned int numChild = root->GetChildCount();
-
-		for (unsigned int i = 0; i < numChild; i++)
-		{
-			LoadNodeMesh(root->GetChild(i));
-		}*/
 	}
 
 	PrintTab("End load meshes");
