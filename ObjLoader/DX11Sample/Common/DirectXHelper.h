@@ -47,6 +47,41 @@ namespace DX
 		OutputDebugStringA(("\n" + str + "\n").c_str());
 	}
 
+	inline const wchar_t* GetWC(const char *c)
+	{
+		const size_t cSize = strlen(c) + 1;
+		size_t outSize;
+		wchar_t* wc = new wchar_t[cSize];
+
+		mbstowcs_s(&outSize, wc, cSize, c, cSize - 1);
+
+		return wc;
+	}
+
+	inline char* GetLower(const char* c)
+	{
+		char* out = new char[strlen(c) + 1];
+		int temp = 'Z' - 'z';
+
+		for (unsigned int i = 0; i < strlen(c) + 1; i++)
+		{
+			if (c[i] <= 'Z' && c[i] >= 'A')
+			{
+				out[i] = c[i] - temp;
+			}
+			else if (c[i] == '_')
+			{
+				out[i] = '-';
+			}
+			else
+			{
+				out[i] = c[i];
+			}
+		}
+
+		return out;
+	}
+
 #if defined(_DEBUG)
 	// Check for SDK Layer support.
 	inline bool SdkLayersAvailable()

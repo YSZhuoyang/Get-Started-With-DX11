@@ -24,14 +24,10 @@ namespace DX11Sample
 			pos.x = x;
 			pos.y = y;
 			pos.z = z;
-		}
-
-		Vertex(DirectX::XMFLOAT3 inputPos)
-		{
-			pos = inputPos;
 		}*/
 
 		DirectX::XMFLOAT3 pos;
+		DirectX::XMFLOAT2 uv;
 		//XMFLOAT3 color;
 	};
 }

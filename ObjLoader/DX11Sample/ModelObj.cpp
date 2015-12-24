@@ -10,13 +10,15 @@ using namespace DX;
 using namespace std;
 using namespace Windows;
 
-ModelObj::ModelObj()
+ModelObj::ModelObj() :
+	triangulated(true)
 {
 	//device = m_deviceResources->GetD3DDevice();
 	//context = m_deviceResources->GetD3DDeviceContext();
 }
 
-void ModelObj::LoadModel(const char* fileName)
+void ModelObj::LoadModel(const char* fileName, ID3D11Device3* device,
+	ID3D11DeviceContext3* context)
 {
 	PrintTab("Start load file");
 
@@ -48,22 +50,26 @@ void ModelObj::LoadModel(const char* fileName)
 
 	importer->Destroy();
 
-	// Triangulate all geometries
-	FbxGeometryConverter lGeomConverter(fbxManager);
-	
-	if (lGeomConverter.Triangulate(scene, /*replace*/true))
+	if (triangulated)
 	{
-		PrintTab("Triangulated");
+		// Triangulate all geometries
+		FbxGeometryConverter lGeomConverter(fbxManager);
+
+		if (lGeomConverter.Triangulate(scene, /*replace*/true))
+		{
+			PrintTab("Triangulated");
+		}
 	}
 
-	LoadMesh(scene);
+	LoadMesh(scene, device, context);
 
 	fbxManager->Destroy();
 
 	PrintTab("End load file");
 }
 
-void ModelObj::LoadMesh(FbxScene* scene)
+void ModelObj::LoadMesh(FbxScene* scene, ID3D11Device3* device,
+	ID3D11DeviceContext3* context)
 {
 	PrintTab("Start load meshes");
 
@@ -80,13 +86,14 @@ void ModelObj::LoadMesh(FbxScene* scene)
 
 		PrintTab("Number of nodes: " + to_string(numNodes));
 
-		LoadNodeMesh(root);
+		LoadNodeMesh(root, device, context);
 	}
 
 	PrintTab("End load meshes");
 }
 
-void ModelObj::LoadNodeMesh(FbxNode* node)
+void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
+	ID3D11DeviceContext3* context)
 {
 	unsigned int numPolygons = 0;
 	unsigned int numVertices = 0;
@@ -104,18 +111,15 @@ void ModelObj::LoadNodeMesh(FbxNode* node)
 		numIndices = fbxMesh->GetPolygonVertexCount();
 		numVertices = fbxMesh->GetControlPointsCount();
 
-		/*for (int i = 0; i < numPolygons; i++)
-		{
-			PrintTab(to_string(fbxMesh->GetPolygonSize(i)));
-		}*/
-
 		vector<Vertex> vertices(numVertices);
 		vector<unsigned int> indices(numIndices);
+		//vector<unsigned int> indices(20000);
 
 		numPolygonVert = 3;
 		//assert(numPolygonVert == 3);
 
 		FbxVector4* controlPoints = fbxMesh->GetControlPoints();
+		//fbxMesh->GetElementUV();
 		int* indices_array = fbxMesh->GetPolygonVertices();
 
 		// Need to be changed for optimization
@@ -124,12 +128,42 @@ void ModelObj::LoadNodeMesh(FbxNode* node)
 			indices[i] = indices_array[i];
 		}
 
+		/*unsigned int indexOfIndices = 0;
+
+		for (unsigned int i = 0; i < numPolygons; i++)
+		{
+			numPolygonVert = fbxMesh->GetPolygonSize(i);
+			
+			for (unsigned int j = 0; j < numPolygonVert; j++)
+			{
+				PrintTab("index: " + to_string(indexOfIndices));
+				indices[indexOfIndices++] = fbxMesh->GetPolygonVertex(i, j);
+			}
+		}
+
+		numIndices = indexOfIndices;
+		*/
+
+		// Obtain texture coordinates for diffuse channel
+		FbxLayerElementArrayTemplate<FbxVector2>* texCoords = 0;
+		fbxMesh->GetTextureUV(&texCoords, FbxLayerElement::eTextureDiffuse);
+
+		//FbxGeometryElementUV* texCoordsArray = fbxMesh->GetElementUV(0);
+		//FbxLayerElementArrayTemplate<FbxVector2> uvs = texCoordsArray->GetDirectArray();
 		for (unsigned int i = 0; i < numVertices; i++)
 		{
 			vertices[i].pos.x = (float)controlPoints[i].mData[0] / 10000.0f;
 			vertices[i].pos.y = (float)controlPoints[i].mData[1] / 10000.0f;
 			vertices[i].pos.z = (float)controlPoints[i].mData[2] / 10000.0f;
+
+			vertices[i].uv.x = (float)texCoords->GetAt(i).mData[0];
+			vertices[i].uv.y = (float)texCoords->GetAt(i).mData[1];
+
+			//vertices[i].uv.x = (float)uvs.GetAt(i).mData[0];
+			//vertices[i].uv.y = (float)uvs.GetAt(i).mData[1];
 		}
+
+		//PrintTab(to_string(texCoords->GetAt(numVertices).mData[0]));
 
 		//OutputDebugStringA(("\n number of polygons: " + to_string(numPolygons) + " \n").c_str());
 		//OutputDebugStringA(("\n number of indices: " + to_string(numIndices) + " \n").c_str());
@@ -158,12 +192,14 @@ void ModelObj::LoadNodeMesh(FbxNode* node)
 		mesh.numVertices = numVertices;
 		mesh.numIndices = numIndices;
 
+		InitMaterials(node, &mesh, device, context);
+
 		entries.push_back(mesh);
 	}
 
 	for (unsigned int i = 0; i < node->GetChildCount(); i++)
 	{
-		LoadNodeMesh(node->GetChild(i));
+		LoadNodeMesh(node->GetChild(i), device, context);
 	}
 }
 
@@ -221,12 +257,84 @@ void ModelObj::InitMesh(ID3D11Device3* device)
 	PrintTab("End init mesh");
 }
 
-void ModelObj::InitMaterials(const string& fileName)
+void ModelObj::InitMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* device,
+	ID3D11DeviceContext3* context)
 {
+	int mcount = node->GetSrcObjectCount<FbxSurfaceMaterial>();
 
+	for (int index = 0; index < mcount; index++)
+	{
+		FbxSurfaceMaterial *material = 
+			(FbxSurfaceMaterial*)node->GetSrcObject<FbxSurfaceMaterial>(index);
+
+		if (material)
+		{
+			// This only gets the material of type sDiffuse, you 
+			// probably need to traverse all Standard Material Property 
+			// by its name to get all possible textures.
+			FbxProperty prop = material->FindProperty(FbxSurfaceMaterial::sDiffuse);
+
+			// Check if it's layeredtextures
+			int layered_texture_count = prop.GetSrcObjectCount<FbxLayeredTexture>();
+
+			if (layered_texture_count > 0)
+			{
+				for (int j = 0; j < layered_texture_count; j++)
+				{
+					FbxLayeredTexture* layered_texture = FbxCast<FbxLayeredTexture>(prop.GetSrcObject<FbxLayeredTexture>(j));
+					int lcount = layered_texture->GetSrcObjectCount<FbxTexture>();
+
+					for (int k = 0; k < lcount; k++)
+					{
+						FbxTexture* texture = 
+							FbxCast<FbxTexture>(layered_texture->GetSrcObject<FbxTexture>(k));
+						// Then, you can get all the properties of the texture, include its name
+						const char* texture_name = texture->GetName();
+
+						// Load files
+
+
+					}
+				}
+			}
+			else
+			{
+				// Directly get textures
+				int texture_count = prop.GetSrcObjectCount<FbxTexture>();
+
+				for (int j = 0; j < texture_count; j++)
+				{
+					const FbxTexture* texture = 
+						FbxCast<FbxTexture>(prop.GetSrcObject<FbxTexture>(j));
+					// Then, you can get all the properties of the texture, include its name
+					const char* texture_name = texture->GetName();
+
+					// Load file
+					mesh->LoadTexture(texture_name, device, context);
+				}
+			}
+		}
+	}
 }
 
-void ModelObj::Render(ID3D11DeviceContext3* context)
+void ModelObj::MeshEntry::LoadTexture(const char* fileName, ID3D11Device3* device, 
+	ID3D11DeviceContext3* context)
+{
+	PrintTab("Start load texture file");
+	
+	string path = "Assets\\starwars-millennium-falcon\\";
+	//string fileNameStr = fileName;
+	fileName = GetLower(fileName);
+	PrintTab(fileName);
+
+	ThrowIfFailed(
+		CreateWICTextureFromFile(device, context, GetWC((path + fileName).c_str()),
+		nullptr, srv.GetAddressOf()));
+
+	PrintTab("End load texture file");
+}
+
+void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState)
 {
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
@@ -247,8 +355,11 @@ void ModelObj::Render(ID3D11DeviceContext3* context)
 			0
 			);
 
+		// Set the sampler state in the pixel shader.
+		context->PSSetSamplers(0, 1, &sampleState);
+		context->PSSetShaderResources(0, 1, mesh->srv.GetAddressOf());
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
+		//context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		//context->IASetInputLayout(mesh->inputLayout.Get());
 
 		context->DrawIndexed(
@@ -339,6 +450,11 @@ FbxString GetAttributeTypeName(FbxNodeAttribute::EType type)
 }
 
 void ModelObj::Clear()
+{
+
+}
+
+void ModelObj::Release()
 {
 
 }

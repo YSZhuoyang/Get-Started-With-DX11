@@ -92,6 +92,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="DX11Sample_TemporaryKey.pfx" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <MeshContentTask Include="Wooden_House.fbx">

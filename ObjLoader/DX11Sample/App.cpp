@@ -51,7 +51,7 @@ void App::Initialize(CoreApplicationView^ applicationView)
 	CoreApplication::Resuming +=
 		ref new EventHandler<Platform::Object^>(this, &App::OnResuming);
 
-	// At this point we have access to the device. 
+	// At this point we have access to the device.
 	// We can create the device-dependent resources.
 	m_deviceResources = std::make_shared<DX::DeviceResources>();
 

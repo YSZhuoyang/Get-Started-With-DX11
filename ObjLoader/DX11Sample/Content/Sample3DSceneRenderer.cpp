@@ -156,13 +156,15 @@ void Sample3DSceneRenderer::Render()
 		);
 
 	// Draw the objects.
-	model.Render(context);
+	model.Render(context, sampleState.Get());
 }
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
 	// Test object loader
-	model.LoadModel("Assets\\starwars-millennium-falcon.fbx");
+	model.LoadModel("Assets\\starwars-millennium-falcon.fbx", 
+		m_deviceResources->GetD3DDevice(), 
+		m_deviceResources->GetD3DDeviceContext());
 	//"Assets\\starwars-millennium-falcon.fbx"
 	//Assets\\wu.FBX
 	//Assets\\Wooden_House.fbx
@@ -191,7 +193,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 		D3D11_INPUT_ELEMENT_DESC inputDesc[] =
 		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA }
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }, 
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 		};
 
 		DX::ThrowIfFailed(
@@ -238,24 +241,43 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		m_loadingComplete = true;
 	});
 
+	// Create and bind texture resources
+	D3D11_SAMPLER_DESC samplerDesc;
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 1;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	samplerDesc.BorderColor[0] = 0;
+	samplerDesc.BorderColor[1] = 0;
+	samplerDesc.BorderColor[2] = 0;
+	samplerDesc.BorderColor[3] = 0;
+	samplerDesc.MinLOD = 0;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	DX::ThrowIfFailed(
+		m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &sampleState));
+	
 	// Turn off cull back
-	/*ID3D11RasterizerState* m_rasterStateNoCulling;
+	ID3D11RasterizerState* m_rasterStateNoCulling;
 	D3D11_RASTERIZER_DESC rasterDesc;//D3D11_RASTERIZER_DESC2
 									 // Setup a raster description which turns off back face culling.
 	rasterDesc.AntialiasedLineEnable = false;
-	rasterDesc.CullMode = D3D11_CULL_NONE;
+	rasterDesc.CullMode = D3D11_CULL_BACK;
 	rasterDesc.DepthBias = 0;
 	rasterDesc.DepthBiasClamp = 0.0f;
 	rasterDesc.DepthClipEnable = true;
 	rasterDesc.FillMode = D3D11_FILL_SOLID;
-	rasterDesc.FrontCounterClockwise = false;
+	rasterDesc.FrontCounterClockwise = true;
 	rasterDesc.MultisampleEnable = false;
 	rasterDesc.ScissorEnable = false;
 	rasterDesc.SlopeScaledDepthBias = 0.0f;
 
 	// Create the no culling rasterizer state.
 	m_deviceResources->GetD3DDevice()->CreateRasterizerState(&rasterDesc, &m_rasterStateNoCulling);
-	m_deviceResources->GetD3DDeviceContext()->RSSetState(m_rasterStateNoCulling);*/
+	m_deviceResources->GetD3DDeviceContext()->RSSetState(m_rasterStateNoCulling);
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources()
@@ -265,6 +287,7 @@ void Sample3DSceneRenderer::ReleaseDeviceDependentResources()
 	m_inputLayout.Reset();
 	m_pixelShader.Reset();
 	m_constantBuffer.Reset();
-	m_vertexBuffer.Reset();
-	m_indexBuffer.Reset();
+
+	// For testing model loading
+	model.Release();
 }

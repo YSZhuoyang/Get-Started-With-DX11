@@ -15,3 +15,4 @@
 #include <concrt.h>
 
 // DirectX Tool Kit for UWP
+#include <WICTextureLoader.h>
