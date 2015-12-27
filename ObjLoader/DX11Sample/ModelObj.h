@@ -25,6 +25,7 @@ namespace Custom
 			ID3D11DeviceContext3* context);
 		void LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 			ID3D11DeviceContext3* context);
+		void ModelObj::LoadUV(FbxMesh* mesh, Vertex* vertices, unsigned int* indices);
 		void InitMesh(ID3D11Device3* device);
 		void Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState);
 		void Release();
@@ -38,7 +39,7 @@ namespace Custom
 			double numVertices,
 			double numIndices);*/
 			void InitResources(ID3D11Device3* device);
-			void LoadTexture(const char* fileName, ID3D11Device3* device,
+			void const LoadTexture(const char* fileName, ID3D11Device3* device,
 				ID3D11DeviceContext3* context);
 
 			ComPtr<ID3D11Buffer> vertexBuffer;

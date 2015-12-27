@@ -123,7 +123,7 @@ void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		int* indices_array = fbxMesh->GetPolygonVertices();
 
 		// Need to be changed for optimization
-		for (int i = 0; i < numIndices; i++)
+		for (unsigned int i = 0; i < numIndices; i++)
 		{
 			indices[i] = indices_array[i];
 		}
@@ -144,32 +144,27 @@ void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		numIndices = indexOfIndices;
 		*/
 
-		// Obtain texture coordinates for diffuse channel
-		FbxLayerElementArrayTemplate<FbxVector2>* texCoords = 0;
-		fbxMesh->GetTextureUV(&texCoords, FbxLayerElement::eTextureDiffuse);
+		// Obtain texture coordinates (wrong! to be modified)
+		//FbxLayerElementArrayTemplate<FbxVector2>* texCoords = 0;
+		//fbxMesh->GetTextureUV(&texCoords, FbxLayerElement::eTextureDiffuse);
 
-		//FbxGeometryElementUV* texCoordsArray = fbxMesh->GetElementUV(0);
-		//FbxLayerElementArrayTemplate<FbxVector2> uvs = texCoordsArray->GetDirectArray();
 		for (unsigned int i = 0; i < numVertices; i++)
 		{
 			vertices[i].pos.x = (float)controlPoints[i].mData[0] / 10000.0f;
 			vertices[i].pos.y = (float)controlPoints[i].mData[1] / 10000.0f;
 			vertices[i].pos.z = (float)controlPoints[i].mData[2] / 10000.0f;
 
-			vertices[i].uv.x = (float)texCoords->GetAt(i).mData[0];
-			vertices[i].uv.y = (float)texCoords->GetAt(i).mData[1];
-
-			//vertices[i].uv.x = (float)uvs.GetAt(i).mData[0];
-			//vertices[i].uv.y = (float)uvs.GetAt(i).mData[1];
+			//vertices[i].uv.x = (float)texCoords->GetAt(i).mData[0];
+			//vertices[i].uv.y = 1.0f - (float)texCoords->GetAt(i).mData[1];
 		}
 
-		//PrintTab(to_string(texCoords->GetAt(numVertices).mData[0]));
+		LoadUV(fbxMesh, &vertices[0], &indices[0]);
 
 		//OutputDebugStringA(("\n number of polygons: " + to_string(numPolygons) + " \n").c_str());
 		//OutputDebugStringA(("\n number of indices: " + to_string(numIndices) + " \n").c_str());
 		//OutputDebugStringA(("\n number of vertices: " + to_string(vertices.size()) + " \n").c_str());
 
-		/* This method does not use index drawing
+		/* This approach does not use index drawing
 		for (unsigned int i = 0; i < numPolygons; i++)
 		{
 			numPolygonVert = fbxMesh->GetPolygonSize(i);
@@ -197,9 +192,109 @@ void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		entries.push_back(mesh);
 	}
 
-	for (unsigned int i = 0; i < node->GetChildCount(); i++)
+	for (int i = 0; i < node->GetChildCount(); i++)
 	{
 		LoadNodeMesh(node->GetChild(i), device, context);
+	}
+}
+
+void ModelObj::LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indices)
+{
+	//get all UV set names
+	FbxStringList UVSetNameList;
+	fbxMesh->GetUVSetNames(UVSetNameList);
+
+	//iterating over all uv sets
+	for (int lUVSetIndex = 0; lUVSetIndex < UVSetNameList.GetCount(); lUVSetIndex++)
+	{
+		//get lUVSetIndex-th uv set
+		const char* UVSetName = UVSetNameList.GetStringAt(lUVSetIndex);
+		const FbxGeometryElementUV* UVElement = fbxMesh->GetElementUV(UVSetName);
+
+		if (!UVElement)
+		{
+			continue;
+		}
+		
+		// only support mapping mode eByPolygonVertex and eByControlPoint
+		if (UVElement->GetMappingMode() != FbxGeometryElement::eByPolygonVertex &&
+			UVElement->GetMappingMode() != FbxGeometryElement::eByControlPoint)
+		{
+			return;
+		}
+
+		//index array, where holds the index referenced to the uv data
+		const bool useIndex = UVElement->GetReferenceMode() != FbxGeometryElement::eDirect;
+		const int indexCount = (useIndex) ? UVElement->GetIndexArray().GetCount() : 0;
+
+		//iterating through the data by polygon
+		const int polyCount = fbxMesh->GetPolygonCount();
+
+		if (UVElement->GetMappingMode() == FbxGeometryElement::eByControlPoint)
+		{
+			for (int polyIndex = 0; polyIndex < polyCount; ++polyIndex)
+			{
+				// build the max index array that we need to pass into MakePoly
+				const unsigned int polySize = fbxMesh->GetPolygonSize(polyIndex);
+
+				for (unsigned int vertIndex = 0; vertIndex < polySize; ++vertIndex)
+				{
+					FbxVector2 UVValue;
+
+					//get the index of the current vertex in control points array
+					int polyVertIndex = fbxMesh->GetPolygonVertex(polyIndex, vertIndex);
+
+					//the UV index depends on the reference mode
+					int UVIndex = useIndex ? UVElement->GetIndexArray().GetAt(polyVertIndex) : polyVertIndex;
+
+					UVValue = UVElement->GetDirectArray().GetAt(UVIndex);
+
+					//Read texture coordinates
+					unsigned int vertexIndex = indices[polyVertIndex];
+
+					vertices[vertexIndex].uv.x = (float)UVValue.mData[0];
+					vertices[vertexIndex].uv.y = 1.0f - (float)UVValue.mData[1];
+
+					PrintTab("UV got eByControlPoint!!");
+				}
+			}
+		}
+		else if (UVElement->GetMappingMode() == FbxGeometryElement::eByPolygonVertex)
+		{
+			int polyIndexCounter = 0;
+
+			for (int polyIndex = 0; polyIndex < polyCount; ++polyIndex)
+			{
+				// build the max index array that we need to pass into MakePoly
+				const int polySize = fbxMesh->GetPolygonSize(polyIndex);
+
+				for (int vertIndex = 0; vertIndex < polySize; ++vertIndex)
+				{
+					if (polyIndexCounter < indexCount)
+					{
+						FbxVector2 UVValue;
+
+						//the UV index depends on the reference mode
+						int UVIndex = useIndex ? UVElement->GetIndexArray().GetAt(polyIndexCounter) : polyIndexCounter;
+
+						UVValue = UVElement->GetDirectArray().GetAt(UVIndex);
+
+						//Read texture coordinates
+						unsigned int vertexIndex = indices[polyIndexCounter];
+
+						vertices[vertexIndex].uv.x = (float)UVValue.mData[0];
+						vertices[vertexIndex].uv.y = 1.0f - (float)UVValue.mData[1];
+
+						PrintTab("x: " + to_string(vertices[vertexIndex].uv.x));
+						PrintTab("y: " + to_string(vertices[vertexIndex].uv.y));
+
+						PrintTab("UV got eByPolygonVertex!!");
+
+						polyIndexCounter++;
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -292,8 +387,10 @@ void ModelObj::InitMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* devi
 						const char* texture_name = texture->GetName();
 
 						// Load files
+						mesh->LoadTexture(texture_name, device, context);
 
-
+						PrintTab(to_string(layered_texture_count) + " Layered textures loaded!" + 
+							"Number of layers: " + to_string(lcount));
 					}
 				}
 			}
@@ -311,25 +408,46 @@ void ModelObj::InitMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* devi
 
 					// Load file
 					mesh->LoadTexture(texture_name, device, context);
+
+					PrintTab(to_string(texture_count) + " Single texture loaded!");
 				}
 			}
 		}
 	}
 }
 
-void ModelObj::MeshEntry::LoadTexture(const char* fileName, ID3D11Device3* device, 
+void const ModelObj::MeshEntry::LoadTexture(const char* fileName, ID3D11Device3* device, 
 	ID3D11DeviceContext3* context)
 {
 	PrintTab("Start load texture file");
-	
-	string path = "Assets\\starwars-millennium-falcon\\";
-	//string fileNameStr = fileName;
-	fileName = GetLower(fileName);
 	PrintTab(fileName);
 
-	ThrowIfFailed(
-		CreateWICTextureFromFile(device, context, GetWC((path + fileName).c_str()),
-		nullptr, srv.GetAddressOf()));
+	string path = "Assets\\starwars-millennium-falcon\\";
+	//string path("Assets\\Wooden_House\\");
+	string fileNameStr(fileName);
+
+	// For testing
+	/*if (fileNameStr.find(".png") == -1 && fileNameStr.find(".png") == -1)
+	{
+		fileNameStr += ".png";
+	}*/
+
+	HRESULT hr = CreateWICTextureFromFile(device, context, GetWC((path + fileNameStr).c_str()),
+		nullptr, srv.GetAddressOf());
+
+	if (FAILED(hr))
+	{
+		// Try both uppercase and lowercase
+		HRESULT hr2 = CreateWICTextureFromFile(device, context,
+			GetWC((path + GetLower(fileNameStr.c_str())).c_str()),
+			nullptr, srv.GetAddressOf());
+
+		if (FAILED(hr2))
+		{
+			// Set a breakpoint on this line to catch Win32 API errors.
+			throw Platform::Exception::CreateException(hr);
+		}
+	}
 
 	PrintTab("End load texture file");
 }

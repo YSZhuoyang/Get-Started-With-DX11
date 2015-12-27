@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <pch.h>
 #include <ppltasks.h>	// For create_task
 
 using namespace std;
@@ -80,6 +81,41 @@ namespace DX
 		}
 
 		return out;
+	}
+
+	inline void LoadTexture(const char* fileName, ID3D11Device3* device,
+		ID3D11DeviceContext3* context, ID3D11ShaderResourceView* srv)
+	{
+		/*PrintTab("Start load texture file");
+		PrintTab(fileName);
+		
+		//string path = "Assets\\starwars-millennium-falcon\\";
+		string path("Assets\\Wooden_House\\");
+		string fileNameStr(fileName);
+
+		if (fileNameStr.find(".fbx") == -1 && fileNameStr.find(".FBX") == -1)
+		{
+			fileNameStr += ".fbx";
+		}
+
+		HRESULT hr = CreateWICTextureFromFile(device, context, GetWC((path + fileNameStr).c_str()),
+			nullptr, &srv);
+
+		if (FAILED(hr))
+		{
+			// Try both uppercase and lowercase
+			HRESULT hr2 = CreateWICTextureFromFile(device, context, 
+				GetWC((path + GetLower(fileNameStr.c_str)).c_str()),
+				nullptr, &srv);
+
+			if (FAILED(hr2))
+			{
+				// Set a breakpoint on this line to catch Win32 API errors.
+				throw Platform::Exception::CreateException(hr);
+			}
+		}
+
+		PrintTab("End load texture file");*/
 	}
 
 #if defined(_DEBUG)
