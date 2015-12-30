@@ -10,6 +10,7 @@ cbuffer ModelViewProjectionConstantBuffer : register(b0)
 struct VertexShaderInput
 {
 	float3 pos : POSITION;
+	float3 normal : NORMAL;
 	float2 uv : TEXCOORD0;
 };
 
@@ -17,6 +18,7 @@ struct VertexShaderInput
 struct PixelShaderInput
 {
 	float4 pos : SV_POSITION;
+	float3 normal : NORMAL;
 	float2 uv : TEXCOORD0;
 };
 

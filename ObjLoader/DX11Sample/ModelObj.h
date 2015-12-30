@@ -76,6 +76,5 @@ namespace Custom
 		//ID3D11DeviceContext3* context;
 
 		vector<MeshEntry> entries;
-		//vector<ID3D11Texture2D> textures;
 	};
 }

@@ -94,12 +94,4 @@
     <None Include="DX11Sample_TemporaryKey.pfx" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <MeshContentTask Include="Wooden_House.fbx">
-      <Filter>Assets</Filter>
-    </MeshContentTask>
-    <MeshContentTask Include="..\Debug\DX11Sample\AppX\Assets\starwars-millennium-falcon.fbx">
-      <Filter>Assets</Filter>
-    </MeshContentTask>
-  </ItemGroup>
 </Project>

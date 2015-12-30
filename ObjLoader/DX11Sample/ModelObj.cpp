@@ -111,75 +111,48 @@ void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		numIndices = fbxMesh->GetPolygonVertexCount();
 		numVertices = fbxMesh->GetControlPointsCount();
 
+		// Do not use indexed drawing method
+		numVertices = numIndices;
+
 		vector<Vertex> vertices(numVertices);
 		vector<unsigned int> indices(numIndices);
-		//vector<unsigned int> indices(20000);
 
 		numPolygonVert = 3;
 		//assert(numPolygonVert == 3);
 
 		FbxVector4* controlPoints = fbxMesh->GetControlPoints();
-		//fbxMesh->GetElementUV();
+		
 		int* indices_array = fbxMesh->GetPolygonVertices();
 
 		// Need to be changed for optimization
 		for (unsigned int i = 0; i < numIndices; i++)
 		{
 			indices[i] = indices_array[i];
+
+			vertices[i].pos.x = (float)fbxMesh->GetControlPointAt(indices[i]).mData[0] / 10000.0f;
+			vertices[i].pos.y = (float)fbxMesh->GetControlPointAt(indices[i]).mData[1] / 10000.0f;
+			vertices[i].pos.z = (float)fbxMesh->GetControlPointAt(indices[i]).mData[2] / 10000.0f;
 		}
 
-		/*unsigned int indexOfIndices = 0;
-
-		for (unsigned int i = 0; i < numPolygons; i++)
+		// For indexed drawing
+		/*for (unsigned int i = 0; i < numVertices; i++)
 		{
-			numPolygonVert = fbxMesh->GetPolygonSize(i);
-			
-			for (unsigned int j = 0; j < numPolygonVert; j++)
-			{
-				PrintTab("index: " + to_string(indexOfIndices));
-				indices[indexOfIndices++] = fbxMesh->GetPolygonVertex(i, j);
-			}
-		}
-
-		numIndices = indexOfIndices;
-		*/
-
-		// Obtain texture coordinates (wrong! to be modified)
-		//FbxLayerElementArrayTemplate<FbxVector2>* texCoords = 0;
-		//fbxMesh->GetTextureUV(&texCoords, FbxLayerElement::eTextureDiffuse);
-
-		for (unsigned int i = 0; i < numVertices; i++)
-		{
-			vertices[i].pos.x = (float)controlPoints[i].mData[0] / 10000.0f;
-			vertices[i].pos.y = (float)controlPoints[i].mData[1] / 10000.0f;
-			vertices[i].pos.z = (float)controlPoints[i].mData[2] / 10000.0f;
-
-			//vertices[i].uv.x = (float)texCoords->GetAt(i).mData[0];
-			//vertices[i].uv.y = 1.0f - (float)texCoords->GetAt(i).mData[1];
-		}
+			vertices[i].pos.x = (float)controlPoints[i].mData[0];// / 25.0f;
+			vertices[i].pos.y = (float)controlPoints[i].mData[1];// / 25.0f;
+			vertices[i].pos.z = (float)controlPoints[i].mData[2];// / 25.0f;
+		}*/
 
 		LoadUV(fbxMesh, &vertices[0], &indices[0]);
+
+		// Set to be clockwise, must be done after reading uvs and normals
+		for (auto it = vertices.begin(); it != vertices.end(); it += 3)
+		{
+			std::swap(*it, *(it + 2));
+		}
 
 		//OutputDebugStringA(("\n number of polygons: " + to_string(numPolygons) + " \n").c_str());
 		//OutputDebugStringA(("\n number of indices: " + to_string(numIndices) + " \n").c_str());
 		//OutputDebugStringA(("\n number of vertices: " + to_string(vertices.size()) + " \n").c_str());
-
-		/* This approach does not use index drawing
-		for (unsigned int i = 0; i < numPolygons; i++)
-		{
-			numPolygonVert = fbxMesh->GetPolygonSize(i);
-			assert(numPolygonVert == 3);
-
-			for (unsigned int j = 0; j < numPolygonVert; j++)
-			{
-				int controlPointIndex = fbxMesh->GetPolygonVertex(i, j);
-				Vertex v(
-					(float)controlPoints[controlPointIndex].mData[0],
-					(float)controlPoints[controlPointIndex].mData[0],
-					(float)controlPoints[controlPointIndex].mData[0]);
-				vertices.push_back(v);
-			}
-		}*/
 
 		MeshEntry mesh;
 		mesh.vertices = vertices;
@@ -241,19 +214,20 @@ void ModelObj::LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indices)
 				{
 					FbxVector2 UVValue;
 
-					//get the index of the current vertex in control points array
+					// get the index of the current vertex in control points array
 					int polyVertIndex = fbxMesh->GetPolygonVertex(polyIndex, vertIndex);
 
-					//the UV index depends on the reference mode
+					// the UV index depends on the reference mode
 					int UVIndex = useIndex ? UVElement->GetIndexArray().GetAt(polyVertIndex) : polyVertIndex;
 
 					UVValue = UVElement->GetDirectArray().GetAt(UVIndex);
 
-					//Read texture coordinates
-					unsigned int vertexIndex = indices[polyVertIndex];
+					// Copy texture coordinates
+					// For indexed drawing
+					//unsigned int vertexIndex = indices[polyVertIndex];
 
-					vertices[vertexIndex].uv.x = (float)UVValue.mData[0];
-					vertices[vertexIndex].uv.y = 1.0f - (float)UVValue.mData[1];
+					vertices[polyVertIndex].uv.x = (float)UVValue.mData[0];
+					vertices[polyVertIndex].uv.y = 1.0f - (float)UVValue.mData[1];
 
 					PrintTab("UV got eByControlPoint!!");
 				}
@@ -274,25 +248,23 @@ void ModelObj::LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indices)
 					{
 						FbxVector2 UVValue;
 
-						//the UV index depends on the reference mode
+						// the UV index depends on the reference mode
 						int UVIndex = useIndex ? UVElement->GetIndexArray().GetAt(polyIndexCounter) : polyIndexCounter;
 
 						UVValue = UVElement->GetDirectArray().GetAt(UVIndex);
 
-						//Read texture coordinates
-						unsigned int vertexIndex = indices[polyIndexCounter];
+						// Copy texture coordinates
+						// For indexed drawing
+						//unsigned int vertexIndex = indices[polyIndexCounter];
 
-						vertices[vertexIndex].uv.x = (float)UVValue.mData[0];
-						vertices[vertexIndex].uv.y = 1.0f - (float)UVValue.mData[1];
-
-						PrintTab("x: " + to_string(vertices[vertexIndex].uv.x));
-						PrintTab("y: " + to_string(vertices[vertexIndex].uv.y));
-
-						PrintTab("UV got eByPolygonVertex!!");
+						vertices[polyIndexCounter].uv.x = (float)UVValue.mData[0];
+						vertices[polyIndexCounter].uv.y = 1.0f - (float)UVValue.mData[1];
 
 						polyIndexCounter++;
 					}
 				}
+
+				PrintTab("UV got eByPolygonVertex!!");
 			}
 		}
 	}
@@ -301,13 +273,6 @@ void ModelObj::LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indices)
 void ModelObj::MeshEntry::InitResources(ID3D11Device3* device)
 {
 	PrintTab("Start init resources of a mesh");
-
-	/*D3D11_INPUT_ELEMENT_DESC inputDesc[] = 
-	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA}
-	};*/
-
-	//device->CreateInputLayout();
 
 	// Create vertex buffer
 	D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
@@ -324,7 +289,7 @@ void ModelObj::MeshEntry::InitResources(ID3D11Device3* device)
 		);
 
 	// Create index buffer
-	D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+	/*D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
 	indexBufferData.pSysMem = &indices[0];
 	indexBufferData.SysMemPitch = 0;
 	indexBufferData.SysMemSlicePitch = 0;
@@ -336,7 +301,7 @@ void ModelObj::MeshEntry::InitResources(ID3D11Device3* device)
 			&indexBuffer
 			)
 		);
-
+	*/
 	PrintTab("End init resources of a mesh");
 }
 
@@ -405,10 +370,10 @@ void ModelObj::InitMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* devi
 						FbxCast<FbxTexture>(prop.GetSrcObject<FbxTexture>(j));
 					// Then, you can get all the properties of the texture, include its name
 					const char* texture_name = texture->GetName();
-
+					
 					// Load file
 					mesh->LoadTexture(texture_name, device, context);
-
+					
 					PrintTab(to_string(texture_count) + " Single texture loaded!");
 				}
 			}
@@ -423,11 +388,14 @@ void const ModelObj::MeshEntry::LoadTexture(const char* fileName, ID3D11Device3*
 	PrintTab(fileName);
 
 	string path = "Assets\\starwars-millennium-falcon\\";
-	//string path("Assets\\Wooden_House\\");
+	//string path("Assets\\farm_house\\Textures\\");
+	//string path = "Assets\\Wooden_House\\";
+
+	//fileName = "Farmhouse Texture.jpg";
 	string fileNameStr(fileName);
 
 	// For testing
-	/*if (fileNameStr.find(".png") == -1 && fileNameStr.find(".png") == -1)
+	/*if (fileNameStr.find(".png") == -1)
 	{
 		fileNameStr += ".png";
 	}*/
@@ -467,11 +435,11 @@ void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleS
 			&offset
 			);
 
-		context->IASetIndexBuffer(
+		/*context->IASetIndexBuffer(
 			mesh->indexBuffer.Get(),
 			DXGI_FORMAT_R32_UINT, // Each index is one 32-bit unsigned integer (short).
 			0
-			);
+			);*/
 
 		// Set the sampler state in the pixel shader.
 		context->PSSetSamplers(0, 1, &sampleState);
@@ -480,10 +448,11 @@ void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleS
 		//context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		//context->IASetInputLayout(mesh->inputLayout.Get());
 
-		context->DrawIndexed(
+		context->Draw(mesh->numVertices, 0);
+		/*context->DrawIndexed(
 			mesh->numIndices,
 			0,
-			0);
+			0);*/
 	}
 }
 

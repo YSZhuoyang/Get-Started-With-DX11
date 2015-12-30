@@ -162,12 +162,13 @@ void Sample3DSceneRenderer::Render()
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
 	// Test object loader
-	model.LoadModel("Assets\\starwars-millennium-falcon.fbx", 
+	model.LoadModel("Assets\\starwars-millennium-falcon\\starwars-millennium-falcon.fbx", 
 		m_deviceResources->GetD3DDevice(), 
 		m_deviceResources->GetD3DDeviceContext());
-	//"Assets\\starwars-millennium-falcon.fbx"
+	//Assets\\starwars-millennium-falcon\\starwars-millennium-falcon.fbx
 	//Assets\\wu.FBX
 	//Assets\\Wooden_House.fbx
+	//Assets\\farm_house\\Autodesk\\Farmhouse.fbx
 
 
 	// Load shaders asynchronously.
@@ -194,7 +195,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		D3D11_INPUT_ELEMENT_DESC inputDesc[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }, 
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 		};
 
 		DX::ThrowIfFailed(
@@ -261,7 +263,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 		m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &sampleState));
 	
 	// Turn off cull back
-	ID3D11RasterizerState* m_rasterStateNoCulling;
+	/*ID3D11RasterizerState* m_rasterStateNoCulling;
 	D3D11_RASTERIZER_DESC rasterDesc;//D3D11_RASTERIZER_DESC2
 									 // Setup a raster description which turns off back face culling.
 	rasterDesc.AntialiasedLineEnable = false;
@@ -277,7 +279,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 
 	// Create the no culling rasterizer state.
 	m_deviceResources->GetD3DDevice()->CreateRasterizerState(&rasterDesc, &m_rasterStateNoCulling);
-	m_deviceResources->GetD3DDeviceContext()->RSSetState(m_rasterStateNoCulling);
+	m_deviceResources->GetD3DDeviceContext()->RSSetState(m_rasterStateNoCulling);*/
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources()

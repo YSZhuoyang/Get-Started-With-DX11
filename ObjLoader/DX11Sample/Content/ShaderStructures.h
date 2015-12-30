@@ -27,7 +27,7 @@ namespace DX11Sample
 		}*/
 
 		DirectX::XMFLOAT3 pos;
+		DirectX::XMFLOAT3 normal;
 		DirectX::XMFLOAT2 uv;
-		//XMFLOAT3 color;
 	};
 }
