@@ -62,24 +62,39 @@
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
       <Filter>Assets</Filter>
     </Image>
+    <Filter Include="Common\ModelLoader">
+      <UniqueIdentifier>{c7323041-5c96-47d5-ac6b-c52a574154f4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="DX11SampleMain.cpp" />
     <ClCompile Include="pch.cpp" />
-    <ClCompile Include="ModelObj.cpp">
-      <Filter>Content</Filter>
+    <ClCompile Include="Common\ModelLoader\MeshImporter.cpp">
+      <Filter>Common\ModelLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\ModelLoader\FbxLoader.cpp">
+      <Filter>Common\ModelLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\ModelLoader\ModelObj.cpp">
+      <Filter>Common\ModelLoader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="DX11SampleMain.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="ModelObj.h">
-      <Filter>Content</Filter>
-    </ClInclude>
     <ClInclude Include="CustomStream.h">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\ModelLoader\MeshImporter.h">
+      <Filter>Common\ModelLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\ModelLoader\FbxLoader.h">
+      <Filter>Common\ModelLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\ModelLoader\ModelObj.h">
+      <Filter>Common\ModelLoader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -207,6 +207,9 @@
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="Common\DeviceResources.h" />
+    <ClInclude Include="Common\ModelLoader\FbxLoader.h" />
+    <ClInclude Include="Common\ModelLoader\MeshImporter.h" />
+    <ClInclude Include="Common\ModelLoader\ModelObj.h" />
     <ClInclude Include="CustomStream.h" />
     <ClInclude Include="DX11SampleMain.h" />
     <ClInclude Include="Common\DirectXHelper.h" />
@@ -214,16 +217,17 @@
     <ClInclude Include="Content\Sample3DSceneRenderer.h" />
     <ClInclude Include="Content\SampleFpsTextRenderer.h" />
     <ClInclude Include="Content\ShaderStructures.h" />
-    <ClInclude Include="ModelObj.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Common\DeviceResources.cpp" />
+    <ClCompile Include="Common\ModelLoader\FbxLoader.cpp" />
+    <ClCompile Include="Common\ModelLoader\MeshImporter.cpp" />
+    <ClCompile Include="Common\ModelLoader\ModelObj.cpp" />
     <ClCompile Include="DX11SampleMain.cpp" />
     <ClCompile Include="Content\SampleFpsTextRenderer.cpp" />
     <ClCompile Include="Content\Sample3DSceneRenderer.cpp" />
-    <ClCompile Include="ModelObj.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

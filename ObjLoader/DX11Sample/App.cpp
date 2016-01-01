@@ -1,11 +1,9 @@
 ﻿#include "pch.h"
 #include "App.h"
-#include "ModelObj.h"
 
-#include <ppltasks.h>
 
 using namespace DX11Sample;
-using namespace Custom;
+using namespace ModelImporter;
 
 using namespace concurrency;
 using namespace Windows::ApplicationModel;

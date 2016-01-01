@@ -1,12 +1,13 @@
 ﻿#include "pch.h"
-#include "Sample3DSceneRenderer.h"
 
+#include "Sample3DSceneRenderer.h"
 #include "..\Common\DirectXHelper.h"
 
 using namespace DX11Sample;
 
 using namespace DirectX;
 using namespace Windows::Foundation;
+
 
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources) :
@@ -162,8 +163,11 @@ void Sample3DSceneRenderer::Render()
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
 	// Test object loader
-	model.LoadModel("Assets\\starwars-millennium-falcon\\starwars-millennium-falcon.fbx", 
-		m_deviceResources->GetD3DDevice(), 
+	FbxLoader fbxLoader;
+
+	fbxLoader.LoadFbxModel("Assets\\starwars-millennium-falcon\\starwars-millennium-falcon.fbx",
+		&model, 
+		m_deviceResources->GetD3DDevice(),
 		m_deviceResources->GetD3DDeviceContext());
 	//Assets\\starwars-millennium-falcon\\starwars-millennium-falcon.fbx
 	//Assets\\wu.FBX

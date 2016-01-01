@@ -3,10 +3,10 @@
 #include "..\Common\DeviceResources.h"
 #include "ShaderStructures.h"
 #include "..\Common\StepTimer.h"
+#include "Common\ModelLoader\ModelObj.h"
+#include "Common\ModelLoader\FbxLoader.h"
 
-#include "ModelObj.h"
-
-using namespace Custom;
+using namespace ModelImporter;
 
 
 namespace DX11Sample

@@ -1,74 +1,24 @@
-﻿#include "pch.h"
+#include "pch.h"
+
 #include <ppltasks.h>
 #include <string>
 
-#include "ModelObj.h"
+#include "MeshImporter.h"
 
-using namespace Custom;
-using namespace DirectX;
+using namespace ModelImporter;
 using namespace DX;
-using namespace std;
-using namespace Windows;
 
-ModelObj::ModelObj() :
-	triangulated(true)
+MeshImporter::MeshImporter(ModelObj* modelInput)
 {
-	//device = m_deviceResources->GetD3DDevice();
-	//context = m_deviceResources->GetD3DDeviceContext();
+	model = modelInput;
 }
 
-void ModelObj::LoadModel(const char* fileName, ID3D11Device3* device,
-	ID3D11DeviceContext3* context)
+MeshImporter::~MeshImporter()
 {
-	PrintTab("Start load file");
-
-	//Clear();
-
-	// create a SdkManager
-	FbxManager* fbxManager = FbxManager::Create();
-	// create an IOSettings object
-	FbxIOSettings* ios = FbxIOSettings::Create(fbxManager, IOSROOT);
-	// create an empty scene
-	FbxScene* scene = FbxScene::Create(fbxManager, "myScene");
-	// create an importer.
-	FbxImporter* importer = FbxImporter::Create(fbxManager, "");
-
-	// Use the first argument as the filename for the importer
-	if (!importer->Initialize(fileName, -1, fbxManager->GetIOSettings()))
-	{
-		string debug_message = "Call to FbxImporter::Initialize() failed.\n";
-		string error = importer->GetStatus().GetErrorString();
-
-		OutputDebugStringA((debug_message + error).c_str());
-	}
-
-	// import the scene.
-	if (!importer->Import(scene))
-	{
-		OutputDebugStringA("import failed");
-	}
-
-	importer->Destroy();
-
-	if (triangulated)
-	{
-		// Triangulate all geometries
-		FbxGeometryConverter lGeomConverter(fbxManager);
-
-		if (lGeomConverter.Triangulate(scene, /*replace*/true))
-		{
-			PrintTab("Triangulated");
-		}
-	}
-
-	LoadMesh(scene, device, context);
-
-	fbxManager->Destroy();
-
-	PrintTab("End load file");
+	model = nullptr;
 }
 
-void ModelObj::LoadMesh(FbxScene* scene, ID3D11Device3* device,
+void MeshImporter::LoadMesh(FbxScene* scene, ID3D11Device3* device,
 	ID3D11DeviceContext3* context)
 {
 	PrintTab("Start load meshes");
@@ -81,8 +31,8 @@ void ModelObj::LoadMesh(FbxScene* scene, ID3D11Device3* device,
 		// Root node is included
 		numNodes = root->GetChildCount(true) + 1;
 
-		entries.clear();
-		entries.reserve(numNodes);
+		model->entries.clear();
+		model->entries.reserve(numNodes);
 
 		PrintTab("Number of nodes: " + to_string(numNodes));
 
@@ -92,7 +42,7 @@ void ModelObj::LoadMesh(FbxScene* scene, ID3D11Device3* device,
 	PrintTab("End load meshes");
 }
 
-void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
+void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 	ID3D11DeviceContext3* context)
 {
 	unsigned int numPolygons = 0;
@@ -104,7 +54,7 @@ void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		node->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eMesh)
 	{
 		//PrintNode(node);
-		
+
 		// Create meshes
 		FbxMesh* fbxMesh = node->GetMesh();
 		numPolygons = fbxMesh->GetPolygonCount();
@@ -121,7 +71,7 @@ void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		//assert(numPolygonVert == 3);
 
 		FbxVector4* controlPoints = fbxMesh->GetControlPoints();
-		
+
 		int* indices_array = fbxMesh->GetPolygonVertices();
 
 		// Need to be changed for optimization
@@ -137,9 +87,9 @@ void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		// For indexed drawing
 		/*for (unsigned int i = 0; i < numVertices; i++)
 		{
-			vertices[i].pos.x = (float)controlPoints[i].mData[0];// / 25.0f;
-			vertices[i].pos.y = (float)controlPoints[i].mData[1];// / 25.0f;
-			vertices[i].pos.z = (float)controlPoints[i].mData[2];// / 25.0f;
+		vertices[i].pos.x = (float)controlPoints[i].mData[0];// / 25.0f;
+		vertices[i].pos.y = (float)controlPoints[i].mData[1];// / 25.0f;
+		vertices[i].pos.z = (float)controlPoints[i].mData[2];// / 25.0f;
 		}*/
 
 		LoadUV(fbxMesh, &vertices[0], &indices[0]);
@@ -154,15 +104,15 @@ void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		//OutputDebugStringA(("\n number of indices: " + to_string(numIndices) + " \n").c_str());
 		//OutputDebugStringA(("\n number of vertices: " + to_string(vertices.size()) + " \n").c_str());
 
-		MeshEntry mesh;
+		ModelObj::MeshEntry mesh;
 		mesh.vertices = vertices;
 		mesh.indices = indices;
 		mesh.numVertices = numVertices;
 		mesh.numIndices = numIndices;
 
-		InitMaterials(node, &mesh, device, context);
+		LoadMaterials(node, &mesh, device, context);
 
-		entries.push_back(mesh);
+		model->entries.push_back(mesh);
 	}
 
 	for (int i = 0; i < node->GetChildCount(); i++)
@@ -171,7 +121,7 @@ void ModelObj::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 	}
 }
 
-void ModelObj::LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indices)
+void MeshImporter::LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indices)
 {
 	//get all UV set names
 	FbxStringList UVSetNameList;
@@ -188,7 +138,7 @@ void ModelObj::LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indices)
 		{
 			continue;
 		}
-		
+
 		// only support mapping mode eByPolygonVertex and eByControlPoint
 		if (UVElement->GetMappingMode() != FbxGeometryElement::eByPolygonVertex &&
 			UVElement->GetMappingMode() != FbxGeometryElement::eByControlPoint)
@@ -270,61 +220,14 @@ void ModelObj::LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indices)
 	}
 }
 
-void ModelObj::MeshEntry::InitResources(ID3D11Device3* device)
-{
-	PrintTab("Start init resources of a mesh");
-
-	// Create vertex buffer
-	D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
-	vertexBufferData.pSysMem = &vertices[0];
-	vertexBufferData.SysMemPitch = 0;
-	vertexBufferData.SysMemSlicePitch = 0;
-	CD3D11_BUFFER_DESC vertexBufferDesc(numVertices * sizeof(Vertex), D3D11_BIND_VERTEX_BUFFER);
-	DX::ThrowIfFailed(
-		device->CreateBuffer(
-			&vertexBufferDesc,
-			&vertexBufferData,
-			&vertexBuffer
-			)
-		);
-
-	// Create index buffer
-	/*D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
-	indexBufferData.pSysMem = &indices[0];
-	indexBufferData.SysMemPitch = 0;
-	indexBufferData.SysMemSlicePitch = 0;
-	CD3D11_BUFFER_DESC indexBufferDesc(numIndices * sizeof(unsigned int), D3D11_BIND_INDEX_BUFFER);
-	DX::ThrowIfFailed(
-		device->CreateBuffer(
-			&indexBufferDesc,
-			&indexBufferData,
-			&indexBuffer
-			)
-		);
-	*/
-	PrintTab("End init resources of a mesh");
-}
-
-void ModelObj::InitMesh(ID3D11Device3* device)
-{
-	PrintTab("Start init mesh");
-
-	for (unsigned int i = 0; i < entries.size(); i++)
-	{
-		entries[i].InitResources(device);
-	}
-
-	PrintTab("End init mesh");
-}
-
-void ModelObj::InitMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* device,
+void MeshImporter::LoadMaterials(FbxNode* node, ModelObj::MeshEntry* mesh, ID3D11Device3* device,
 	ID3D11DeviceContext3* context)
 {
 	int mcount = node->GetSrcObjectCount<FbxSurfaceMaterial>();
 
 	for (int index = 0; index < mcount; index++)
 	{
-		FbxSurfaceMaterial *material = 
+		FbxSurfaceMaterial *material =
 			(FbxSurfaceMaterial*)node->GetSrcObject<FbxSurfaceMaterial>(index);
 
 		if (material)
@@ -346,15 +249,15 @@ void ModelObj::InitMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* devi
 
 					for (int k = 0; k < lcount; k++)
 					{
-						FbxTexture* texture = 
+						FbxTexture* texture =
 							FbxCast<FbxTexture>(layered_texture->GetSrcObject<FbxTexture>(k));
 						// Then, you can get all the properties of the texture, include its name
 						const char* texture_name = texture->GetName();
 
 						// Load files
-						mesh->LoadTexture(texture_name, device, context);
+						LoadTexture(texture_name, mesh, device, context);
 
-						PrintTab(to_string(layered_texture_count) + " Layered textures loaded!" + 
+						PrintTab(to_string(layered_texture_count) + " Layered textures loaded!" +
 							"Number of layers: " + to_string(lcount));
 					}
 				}
@@ -366,14 +269,14 @@ void ModelObj::InitMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* devi
 
 				for (int j = 0; j < texture_count; j++)
 				{
-					const FbxTexture* texture = 
+					const FbxTexture* texture =
 						FbxCast<FbxTexture>(prop.GetSrcObject<FbxTexture>(j));
 					// Then, you can get all the properties of the texture, include its name
 					const char* texture_name = texture->GetName();
-					
+
 					// Load file
-					mesh->LoadTexture(texture_name, device, context);
-					
+					LoadTexture(texture_name, mesh, device, context);
+
 					PrintTab(to_string(texture_count) + " Single texture loaded!");
 				}
 			}
@@ -381,7 +284,7 @@ void ModelObj::InitMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* devi
 	}
 }
 
-void const ModelObj::MeshEntry::LoadTexture(const char* fileName, ID3D11Device3* device, 
+void const MeshImporter::LoadTexture(const char* fileName, ModelObj::MeshEntry* mesh, ID3D11Device3* device,
 	ID3D11DeviceContext3* context)
 {
 	PrintTab("Start load texture file");
@@ -397,18 +300,18 @@ void const ModelObj::MeshEntry::LoadTexture(const char* fileName, ID3D11Device3*
 	// For testing
 	/*if (fileNameStr.find(".png") == -1)
 	{
-		fileNameStr += ".png";
+	fileNameStr += ".png";
 	}*/
 
 	HRESULT hr = CreateWICTextureFromFile(device, context, GetWC((path + fileNameStr).c_str()),
-		nullptr, srv.GetAddressOf());
+		nullptr, mesh->srv.GetAddressOf());
 
 	if (FAILED(hr))
 	{
 		// Try both uppercase and lowercase
 		HRESULT hr2 = CreateWICTextureFromFile(device, context,
 			GetWC((path + GetLower(fileNameStr.c_str())).c_str()),
-			nullptr, srv.GetAddressOf());
+			nullptr, mesh->srv.GetAddressOf());
 
 		if (FAILED(hr2))
 		{
@@ -419,143 +322,3 @@ void const ModelObj::MeshEntry::LoadTexture(const char* fileName, ID3D11Device3*
 
 	PrintTab("End load texture file");
 }
-
-void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState)
-{
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
-
-	for (vector<MeshEntry>::iterator mesh = entries.begin(); mesh != entries.end(); ++mesh)
-	{
-		context->IASetVertexBuffers(
-			0,
-			1,
-			mesh->vertexBuffer.GetAddressOf(),
-			&stride,
-			&offset
-			);
-
-		/*context->IASetIndexBuffer(
-			mesh->indexBuffer.Get(),
-			DXGI_FORMAT_R32_UINT, // Each index is one 32-bit unsigned integer (short).
-			0
-			);*/
-
-		// Set the sampler state in the pixel shader.
-		context->PSSetSamplers(0, 1, &sampleState);
-		context->PSSetShaderResources(0, 1, mesh->srv.GetAddressOf());
-		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		//context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		//context->IASetInputLayout(mesh->inputLayout.Get());
-
-		context->Draw(mesh->numVertices, 0);
-		/*context->DrawIndexed(
-			mesh->numIndices,
-			0,
-			0);*/
-	}
-}
-
-void ModelObj::PrintNode(FbxNode* node)
-{
-	PrintTab("/Node");
-
-	const char* nodeName = node->GetName();
-	FbxDouble3 translation = node->LclTranslation.Get();
-	FbxDouble3 rotation = node->LclRotation.Get();
-	FbxDouble3 scaling = node->LclScaling.Get();
-	//node->SetGeometricScaling(FbxNode::eDESTINATION_SET, node->GetGeometricScaling(FbxNode::eSOURCE_SET));
-
-	// Print contents of the node
-	OutputDebugStringA(("Position: " +
-		to_string(translation[0]) + ", " +
-		to_string(translation[1]) + ", " +
-		to_string(translation[2]) + ";\n").c_str());
-	OutputDebugStringA(("Rotation: " +
-		to_string(rotation[0]) + ", " +
-		to_string(rotation[1]) + ", " +
-		to_string(rotation[2]) + ";\n").c_str());
-	OutputDebugStringA(("Scaling: " +
-		to_string(scaling[0]) + ", " +
-		to_string(scaling[1]) + ", " +
-		to_string(scaling[2]) + ";\n").c_str());
-
-	for (int i = 0; i < node->GetNodeAttributeCount(); i++)
-	{
-		PrintNodeAttribute(node->GetNodeAttributeByIndex(i));
-	}
-
-	for (int i = 0; i < node->GetChildCount(); i++)
-	{
-		PrintNode(node->GetChild(i));
-	}
-
-	PrintTab("/Node");
-}
-
-void ModelObj::PrintNodeAttribute(FbxNodeAttribute* attr)
-{
-	if (!attr)
-	{
-		return;
-	}
-	
-	//Doesn't support UWP API
-	//string typeName = GetAttributeTypeName(attr->GetAttributeType());
-	string attrName = attr->GetName();
-
-	OutputDebugStringA(("\nAttr type: " + to_string(attr->GetAttributeType()) + "\n").c_str());
-	OutputDebugStringA(("Attr name: " + attrName + "\n").c_str());
-}
-
-FbxString GetAttributeTypeName(FbxNodeAttribute::EType type)
-{
-	switch (type)
-	{
-		case FbxNodeAttribute::eUnknown: return "unidentified";
-		case FbxNodeAttribute::eNull: return "null";
-		case FbxNodeAttribute::eMarker: return "marker";
-		case FbxNodeAttribute::eSkeleton: return "skeleton";
-		case FbxNodeAttribute::eMesh: return "mesh";
-		case FbxNodeAttribute::eNurbs: return "nurbs";
-		case FbxNodeAttribute::ePatch: return "patch";
-		case FbxNodeAttribute::eCamera: return "camera";
-		case FbxNodeAttribute::eCameraStereo: return "stereo";
-		case FbxNodeAttribute::eCameraSwitcher: return "camera switcher";
-		case FbxNodeAttribute::eLight: return "light";
-		case FbxNodeAttribute::eOpticalReference: return "optical reference";
-		case FbxNodeAttribute::eOpticalMarker: return "marker";
-		case FbxNodeAttribute::eNurbsCurve: return "nurbs curve";
-		case FbxNodeAttribute::eTrimNurbsSurface: return "trim nurbs surface";
-		case FbxNodeAttribute::eBoundary: return "boundary";
-		case FbxNodeAttribute::eNurbsSurface: return "nurbs surface";
-		case FbxNodeAttribute::eShape: return "shape";
-		case FbxNodeAttribute::eLODGroup: return "lodgroup";
-		case FbxNodeAttribute::eSubDiv: return "subdiv";
-		default: return "unknown";
-	}
-}
-
-void ModelObj::Clear()
-{
-
-}
-
-void ModelObj::Release()
-{
-
-}
-
-/*void ModelObj::MeshEntry::Init(
-	const vector<Vertex>& Vertices, 
-	const vector<int>& Indices, 
-	double NumVertices, 
-	double NumIndices)
-{
-	vertices = Vertices;
-	indices = Indices;
-	numVertices = NumVertices;
-	numIndices = NumIndices;
-}*/
-
-

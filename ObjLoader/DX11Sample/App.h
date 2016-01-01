@@ -2,7 +2,10 @@
 
 #include "pch.h"
 #include "Common\DeviceResources.h"
+#include "Common\ModelLoader\ModelObj.h"
 #include "DX11SampleMain.h"
+
+#include <ppltasks.h>
 
 namespace DX11Sample
 {
