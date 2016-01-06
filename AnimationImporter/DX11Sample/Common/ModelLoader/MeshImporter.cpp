@@ -8,7 +8,8 @@
 using namespace ModelImporter;
 using namespace DX;
 
-MeshImporter::MeshImporter(ModelObj* modelInput)
+MeshImporter::MeshImporter(ModelObj* modelInput) :
+	isTextured(true)
 {
 	model = modelInput;
 }
@@ -79,9 +80,9 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		{
 			indices[i] = indices_array[i];
 
-			vertices[i].pos.x = (float)fbxMesh->GetControlPointAt(indices[i]).mData[0] / 10000.0f;
-			vertices[i].pos.y = (float)fbxMesh->GetControlPointAt(indices[i]).mData[1] / 10000.0f;
-			vertices[i].pos.z = (float)fbxMesh->GetControlPointAt(indices[i]).mData[2] / 10000.0f;
+			vertices[i].pos.x = (float)fbxMesh->GetControlPointAt(indices[i]).mData[0] / 20;// / 10000.0f;
+			vertices[i].pos.y = (float)fbxMesh->GetControlPointAt(indices[i]).mData[1] / 20;// / 10000.0f;
+			vertices[i].pos.z = (float)fbxMesh->GetControlPointAt(indices[i]).mData[2] / 20;// / 10000.0f;
 		}
 
 		// For indexed drawing
@@ -316,7 +317,9 @@ void const MeshImporter::LoadTexture(const char* fileName, ModelObj::MeshEntry* 
 		if (FAILED(hr2))
 		{
 			// Set a breakpoint on this line to catch Win32 API errors.
-			throw Platform::Exception::CreateException(hr);
+			//throw Platform::Exception::CreateException(hr);
+
+			isTextured = false;
 		}
 	}
 

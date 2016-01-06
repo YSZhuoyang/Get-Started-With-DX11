@@ -165,7 +165,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 	// Test object loader
 	FbxLoader fbxLoader;
 
-	fbxLoader.LoadFbxModel("Assets\\starwars-millennium-falcon\\starwars-millennium-falcon.fbx",
+	fbxLoader.LoadFbxModel("Assets\\WalkingMan\\WalkingMan.fbx",
 		&model, 
 		m_deviceResources->GetD3DDevice(),
 		m_deviceResources->GetD3DDeviceContext());

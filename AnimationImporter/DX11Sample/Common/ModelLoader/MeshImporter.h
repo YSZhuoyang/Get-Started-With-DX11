@@ -34,6 +34,7 @@ namespace ModelImporter
 
 	private:
 		unsigned short numNodes;
+		bool isTextured;
 
 		ModelObj* model;
 

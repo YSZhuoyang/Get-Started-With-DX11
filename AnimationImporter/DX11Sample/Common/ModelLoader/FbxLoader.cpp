@@ -31,6 +31,7 @@ void FbxLoader::CreateFbxResources()
 void FbxLoader::ReleaseFbxResources()
 {
 	meshImporter = nullptr;
+	animImporter = nullptr;
 
 	importer->Destroy();
 	scene->Destroy();
