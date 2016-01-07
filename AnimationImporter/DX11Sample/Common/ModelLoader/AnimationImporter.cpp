@@ -1,12 +1,14 @@
 #include "pch.h"
 #include "AnimationImporter.h"
+#include "Common\Utilities.h"
 
 using namespace ModelImporter;
-
+using namespace Utilities;
 
 AnimationImporter::AnimationImporter(ModelObj* modelImported)
 {
 	model = modelImported;
+	skeleton = new Skeleton();
 }
 
 AnimationImporter::~AnimationImporter()
@@ -14,10 +16,98 @@ AnimationImporter::~AnimationImporter()
 	model = nullptr;
 }
 
+// Create skeleton objects within a mesh
+void AnimationImporter::LoadSkeleton(FbxNode* root)
+{
+	for (int i = 0; i < root->GetChildCount(); i++)
+	{
+		FbxNode* child = root->GetChild(i);
+		LoadSkeletonHierarchyRecursively(child, 0, 0, -1);
+	}
+
+	model->skeleton = skeleton;
+}
+
+// Depth value represents the vertical level of the tree, for debugging.
+void AnimationImporter::LoadSkeletonHierarchyRecursively(FbxNode* child, int depth, int index, int parentIndex)
+{
+	if (child->GetNodeAttribute() &&
+		child->GetNodeAttribute()->GetAttributeType() &&
+		child->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eSkeleton)
+	{
+		Bone bone;
+		bone.parentIndex = parentIndex;
+		bone.name = child->GetName();
+
+		skeleton->bones.push_back(bone);
+	}
+
+	int childCount = child->GetChildCount();
+
+	for (int i = 0; i < childCount; i++)
+	{
+		LoadSkeletonHierarchyRecursively(child->GetChild(i), depth + 1, skeleton->bones.size(), index);
+	}
+}
+
+void AnimationImporter::ReadAnimCurves(FbxNode* node)
+{
+	FbxMesh* fbxMesh = node->GetMesh();
+	unsigned int numDeformers = fbxMesh->GetDeformerCount();
+
+	// !!Not sure what is the usage of a geometry transform matrix...
+	FbxAMatrix geometryTransform = GetTransformMatrix(node);
+
+	for (unsigned int deformerIndex = 0; deformerIndex < numDeformers; deformerIndex++)
+	{
+		FbxSkin* fbxSkin = reinterpret_cast<FbxSkin*>(fbxMesh->GetDeformer(deformerIndex, FbxDeformer::eSkin));
+
+		if (!fbxSkin)
+		{
+			continue;
+		}
+
+		unsigned int numBones = fbxSkin->GetClusterCount();
+
+		for (unsigned int boneIndex = 0; boneIndex < numBones; boneIndex++)
+		{
+			FbxCluster* fbxCluster = fbxSkin->GetCluster(boneIndex);
+			// A line is a joint
+			string boneName = fbxCluster->GetLink()->GetName();
+			int jointIndex = skeleton->FindJointIndexByName(boneName);
+
+			FbxAMatrix transformMatrix;
+			FbxAMatrix transformLinkMatrix;
+			FbxAMatrix globalBindposeInverseMatrix;
+
+			// Transform of the mesh at binding time
+			fbxCluster->GetTransformMatrix(transformMatrix);
+			// Transform of the bone from joint space to world space
+			fbxCluster->GetTransformLinkMatrix(transformLinkMatrix);
+			// !!Not sure what is the usage of a geometry transform matrix...
+			globalBindposeInverseMatrix = transformLinkMatrix.Inverse() * transformMatrix * geometryTransform;
+
+			// Update information in skeleton
+			skeleton->bones[jointIndex].globalBindposeInverseMatrix =
+				globalBindposeInverseMatrix;
+			// The link node is the bone?
+			skeleton->bones[jointIndex].linkedNode = fbxCluster->GetLink();
+
+			// Associate each joint with control points it affects
+			/*unsigned int numIndices = fbxCluster->GetControlPointIndicesCount();
+
+			for (unsigned int i = 0; i < numIndices; i++)
+			{
+
+			}*/
+		}
+	}
+}
+
 void DisplayCurveKeys(FbxAnimCurve* curve);
 void DisplayListCurveKeys(FbxAnimCurve* curve, FbxProperty* property);
 
-void AnimationImporter::DisplayAnimation(FbxScene* scene)
+void AnimationImporter::DisplayAnimation(FbxScene* scene, FbxImporter* fbxImporter)
 {
 	PrintTab("Start loading animation data");
 
@@ -33,6 +123,11 @@ void AnimationImporter::DisplayAnimation(FbxScene* scene)
 
 		DisplayAnimation(animStack, scene->GetRootNode(), true);
 		DisplayAnimation(animStack, scene->GetRootNode());
+
+		FbxTakeInfo* animInfo = fbxImporter->GetTakeInfo(i);
+		FbxTime startTime = animInfo->mLocalTimeSpan.GetStart();
+		FbxTime endTime = animInfo->mLocalTimeSpan.GetStop();
+		FbxTime duration = animInfo->mLocalTimeSpan.GetDuration();
 	}
 
 	PrintTab("End loading animation data");
@@ -467,7 +562,7 @@ void DisplayCurveKeys(FbxAnimCurve* curve)
 	{
 		lKeyValue = static_cast<float>(curve->KeyGetValue(i));
 		lKeyTime = curve->KeyGetTime(i);
-
+		
 		outputString = "            Key Time: ";
 		outputString += lKeyTime.GetTimeString(lTimeString, FbxUShort(256));
 		outputString += ".... Key Value: ";

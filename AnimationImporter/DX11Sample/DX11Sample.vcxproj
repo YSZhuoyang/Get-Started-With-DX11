@@ -211,6 +211,7 @@
     <ClInclude Include="Common\ModelLoader\FbxLoader.h" />
     <ClInclude Include="Common\ModelLoader\MeshImporter.h" />
     <ClInclude Include="Common\ModelLoader\ModelObj.h" />
+    <ClInclude Include="Common\Utilities.h" />
     <ClInclude Include="CustomStream.h" />
     <ClInclude Include="DX11SampleMain.h" />
     <ClInclude Include="Common\DirectXHelper.h" />
@@ -227,6 +228,7 @@
     <ClCompile Include="Common\ModelLoader\FbxLoader.cpp" />
     <ClCompile Include="Common\ModelLoader\MeshImporter.cpp" />
     <ClCompile Include="Common\ModelLoader\ModelObj.cpp" />
+    <ClCompile Include="Common\Utilities.cpp" />
     <ClCompile Include="DX11SampleMain.cpp" />
     <ClCompile Include="Content\SampleFpsTextRenderer.cpp" />
     <ClCompile Include="Content\Sample3DSceneRenderer.cpp" />

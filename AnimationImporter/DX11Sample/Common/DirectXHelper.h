@@ -83,6 +83,7 @@ namespace DX
 		return out;
 	}
 
+	// Put into Utilities file
 	inline void LoadTexture(const char* fileName, ID3D11Device3* device,
 		ID3D11DeviceContext3* context, ID3D11ShaderResourceView* srv)
 	{

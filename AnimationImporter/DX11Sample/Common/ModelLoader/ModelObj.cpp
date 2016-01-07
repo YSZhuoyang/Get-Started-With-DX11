@@ -17,7 +17,26 @@ ModelObj::ModelObj() :
 	//context = m_deviceResources->GetD3DDeviceContext();
 }
 
-void ModelObj::MeshEntry::InitResources(ID3D11Device3* device)
+int Skeleton::FindJointIndexByName(string boneName)
+{
+	int jointIndex = 0;
+
+	for (vector<Bone>::iterator it = bones.begin(); it != bones.end(); ++it)
+	{
+		if (it->name == boneName)
+		{
+			return jointIndex;
+		}
+
+		jointIndex++;
+	}
+
+	PrintTab("Joint not found!");
+
+	return -1;
+}
+
+void MeshEntry::InitResources(ID3D11Device3* device)
 {
 	PrintTab("Start init resources of a mesh");
 
@@ -42,13 +61,14 @@ void ModelObj::MeshEntry::InitResources(ID3D11Device3* device)
 	indexBufferData.SysMemSlicePitch = 0;
 	CD3D11_BUFFER_DESC indexBufferDesc(numIndices * sizeof(unsigned int), D3D11_BIND_INDEX_BUFFER);
 	DX::ThrowIfFailed(
-		device->CreateBuffer(
-			&indexBufferDesc,
-			&indexBufferData,
-			&indexBuffer
-			)
-		);
+	device->CreateBuffer(
+	&indexBufferDesc,
+	&indexBufferData,
+	&indexBuffer
+	)
+	);
 	*/
+
 	PrintTab("End init resources of a mesh");
 }
 

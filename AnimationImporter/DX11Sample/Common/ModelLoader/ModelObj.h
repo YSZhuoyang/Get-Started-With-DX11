@@ -15,38 +15,57 @@ using namespace DirectX;
 
 namespace ModelImporter
 {
+	// Change name Bone to Joint, linkedNode to bone?
+	struct Bone
+	{
+	public:
+		int parentIndex;
+		string name;
+		FbxAMatrix globalBindposeInverseMatrix;
+		FbxNode* linkedNode;
+	};
+
+	struct Skeleton
+	{
+	public:
+		vector<Bone> bones;
+
+		int FindJointIndexByName(string boneName);
+	};
+
+	struct MeshEntry
+	{
+		/*void Init(
+		const vector<Vertex>& Vertices,
+		const vector<int>& indices,
+		double numVertices,
+		double numIndices);*/
+		void InitResources(ID3D11Device3* device);
+
+		ComPtr<ID3D11Buffer> vertexBuffer;
+		ComPtr<ID3D11Buffer> indexBuffer;
+		ComPtr<ID3D11ShaderResourceView> srv;
+		//ComPtr<ID3D11InputLayout> m_inputLayout;
+
+		unsigned int numIndices;
+		unsigned int numVertices;
+		//unsigned int materialIndex;
+
+		vector<Vertex> vertices;
+		vector<unsigned int> indices;
+
+		//D3D11_INPUT_ELEMENT_DESC vertexDesc[];
+	};
+
 	class ModelObj
 	{
 	public:
-		struct MeshEntry
-		{
-			/*void Init(
-			const vector<Vertex>& Vertices,
-			const vector<int>& indices,
-			double numVertices,
-			double numIndices);*/
-			void InitResources(ID3D11Device3* device);
-
-			ComPtr<ID3D11Buffer> vertexBuffer;
-			ComPtr<ID3D11Buffer> indexBuffer;
-			ComPtr<ID3D11ShaderResourceView> srv;
-			//ComPtr<ID3D11InputLayout> m_inputLayout;
-
-			unsigned int numIndices;
-			unsigned int numVertices;
-			//unsigned int materialIndex;
-
-			vector<Vertex> vertices;
-			vector<unsigned int> indices;
-
-			//D3D11_INPUT_ELEMENT_DESC vertexDesc[];
-		};
-
 		ModelObj();
 		void InitMesh(ID3D11Device3* device);
 		void Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState);
 		void Release();
 
+		Skeleton* skeleton;
 		vector<MeshEntry> entries;
 
 

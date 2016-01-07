@@ -27,9 +27,10 @@ namespace ModelImporter
 		void LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 			ID3D11DeviceContext3* context);
 		void LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indices);
-		void LoadMaterials(FbxNode* node, ModelObj::MeshEntry* mesh, ID3D11Device3* device,
+		void LoadMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* device,
 			ID3D11DeviceContext3* context);
-		void const LoadTexture(const char* fileName, ModelObj::MeshEntry* mesh, ID3D11Device3* device,
+		// Put into Utilities file
+		void const LoadTexture(const char* fileName, MeshEntry* mesh, ID3D11Device3* device,
 			ID3D11DeviceContext3* context);
 
 	private:

@@ -14,15 +14,19 @@ namespace ModelImporter
 		AnimationImporter(ModelObj* modelImported);
 		~AnimationImporter();
 
-		void DisplayAnimation(FbxScene* scene);
+		void DisplayAnimation(FbxScene* scene, FbxImporter* fbxImporter);
 		void DisplayAnimation(FbxAnimStack* animStack, FbxNode* node, bool isSwitcher = false);
 		void DisplayAnimation(FbxAnimLayer* animLayer, FbxNode* node, bool isSwitcher = false);
 		void DisplayChannels(FbxNode* node, FbxAnimLayer* animLayer, void(*DisplayCurve) (FbxAnimCurve* curve), void(*DisplayListCurve) (FbxAnimCurve* curve, FbxProperty* property), bool isSwitcher);
+		void LoadSkeleton(FbxNode* root);
+		void LoadSkeletonHierarchyRecursively(FbxNode* child, int depth, int index, int parentIndex);
+		void ReadAnimCurves(FbxNode* node);
 		/*void DisplayCurveKeys(FbxAnimCurve* curve);
 		void DisplayListCurveKeys(FbxAnimCurve* curve, FbxProperty* property);*/
 		
 
 	private:
 		ModelObj* model;
+		Skeleton* skeleton;
 	};
 }

@@ -82,6 +82,9 @@
     <ClCompile Include="Common\ModelLoader\AnimationImporter.cpp">
       <Filter>Common\ModelLoader</Filter>
     </ClCompile>
+    <ClCompile Include="Common\Utilities.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -101,6 +104,9 @@
     </ClInclude>
     <ClInclude Include="Common\ModelLoader\AnimationImporter.h">
       <Filter>Common\ModelLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Utilities.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

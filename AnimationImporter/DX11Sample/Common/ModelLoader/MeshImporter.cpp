@@ -105,7 +105,7 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		//OutputDebugStringA(("\n number of indices: " + to_string(numIndices) + " \n").c_str());
 		//OutputDebugStringA(("\n number of vertices: " + to_string(vertices.size()) + " \n").c_str());
 
-		ModelObj::MeshEntry mesh;
+		MeshEntry mesh;
 		mesh.vertices = vertices;
 		mesh.indices = indices;
 		mesh.numVertices = numVertices;
@@ -221,7 +221,7 @@ void MeshImporter::LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indi
 	}
 }
 
-void MeshImporter::LoadMaterials(FbxNode* node, ModelObj::MeshEntry* mesh, ID3D11Device3* device,
+void MeshImporter::LoadMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* device,
 	ID3D11DeviceContext3* context)
 {
 	int mcount = node->GetSrcObjectCount<FbxSurfaceMaterial>();
@@ -285,7 +285,8 @@ void MeshImporter::LoadMaterials(FbxNode* node, ModelObj::MeshEntry* mesh, ID3D1
 	}
 }
 
-void const MeshImporter::LoadTexture(const char* fileName, ModelObj::MeshEntry* mesh, ID3D11Device3* device,
+// Put into Utilities file
+void const MeshImporter::LoadTexture(const char* fileName, MeshEntry* mesh, ID3D11Device3* device,
 	ID3D11DeviceContext3* context)
 {
 	PrintTab("Start load texture file");
