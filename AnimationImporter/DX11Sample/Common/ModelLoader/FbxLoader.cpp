@@ -78,7 +78,7 @@ void FbxLoader::LoadFbxModel(const char* fileName, ModelObj* model, ID3D11Device
 	animImporter = new AnimationImporter(model);
 
 	meshImporter->LoadMesh(scene, device, context);
-	animImporter->DisplayAnimation(scene, importer);
+	//animImporter->DisplayAnimation(scene, importer);
 	
 	//fbxManager->Destroy();
 

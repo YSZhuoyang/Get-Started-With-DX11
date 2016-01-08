@@ -88,20 +88,28 @@ void AnimationImporter::ReadAnimCurves(FbxNode* node)
 			globalBindposeInverseMatrix = transformLinkMatrix.Inverse() * transformMatrix * geometryTransform;
 
 			// Update information in skeleton
-			skeleton->bones[jointIndex].globalBindposeInverseMatrix =
-				globalBindposeInverseMatrix;
+			//skeleton->bones[jointIndex].globalBindposeInverseMatrix =
+			//	globalBindposeInverseMatrix;
 			// The link node is the bone?
 			skeleton->bones[jointIndex].linkedNode = fbxCluster->GetLink();
+			
+			//PrintTab("Bone linked node: ");
+			//PrintTab(fbxCluster->GetLink()->GetName());
 
 			// Associate each joint with control points it affects
-			/*unsigned int numIndices = fbxCluster->GetControlPointIndicesCount();
+			unsigned int numIndices = fbxCluster->GetControlPointIndicesCount();
 
 			for (unsigned int i = 0; i < numIndices; i++)
 			{
 
-			}*/
+			}
 		}
 	}
+}
+
+void AnimationImporter::AddBoneData(int vertIndex, int boneIndex, float weight)
+{
+	
 }
 
 void DisplayCurveKeys(FbxAnimCurve* curve);

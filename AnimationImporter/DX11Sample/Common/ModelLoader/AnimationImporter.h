@@ -21,6 +21,7 @@ namespace ModelImporter
 		void LoadSkeleton(FbxNode* root);
 		void LoadSkeletonHierarchyRecursively(FbxNode* child, int depth, int index, int parentIndex);
 		void ReadAnimCurves(FbxNode* node);
+		void AddBoneData(int vertIndex, int boneIndex, float weight);
 		/*void DisplayCurveKeys(FbxAnimCurve* curve);
 		void DisplayListCurveKeys(FbxAnimCurve* curve, FbxProperty* property);*/
 		

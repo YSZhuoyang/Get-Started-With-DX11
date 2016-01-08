@@ -2,6 +2,12 @@
 
 namespace DX11Sample
 {
+	struct BoneWeight
+	{
+		int index;
+		float weight;
+	};
+
 	// Constant buffer used to send MVP matrices to the vertex shader.
 	struct ModelViewProjectionConstantBuffer
 	{
@@ -29,5 +35,8 @@ namespace DX11Sample
 		DirectX::XMFLOAT3 pos;
 		DirectX::XMFLOAT3 normal;
 		DirectX::XMFLOAT2 uv;
+
+		//vector<BoneWeight> weight;
+		BoneWeight weight[4];
 	};
 }

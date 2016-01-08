@@ -19,9 +19,11 @@ namespace ModelImporter
 	struct Bone
 	{
 	public:
+		int boneIndex;
 		int parentIndex;
 		string name;
-		FbxAMatrix globalBindposeInverseMatrix;
+		//FbxAMatrix globalBindposeInverseMatrix;
+		XMFLOAT4X4 globalBindposeMatrix;
 		FbxNode* linkedNode;
 	};
 

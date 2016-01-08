@@ -15,6 +15,8 @@ ModelObj::ModelObj() :
 {
 	//device = m_deviceResources->GetD3DDevice();
 	//context = m_deviceResources->GetD3DDeviceContext();
+
+	skeleton = new Skeleton();
 }
 
 int Skeleton::FindJointIndexByName(string boneName)
