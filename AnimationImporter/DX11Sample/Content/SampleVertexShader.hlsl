@@ -12,6 +12,8 @@ struct VertexShaderInput
 	float3 pos : POSITION;
 	float3 normal : NORMAL;
 	float2 uv : TEXCOORD0;
+	int4 boneIndices : BONEINDICES;
+	float4 weights : WEIGHTS;
 };
 
 // Per-pixel color data passed through the pixel shader.

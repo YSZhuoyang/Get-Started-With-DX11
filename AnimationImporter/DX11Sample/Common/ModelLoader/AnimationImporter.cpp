@@ -74,7 +74,7 @@ void AnimationImporter::ReadAnimCurves(FbxNode* node)
 			FbxCluster* fbxCluster = fbxSkin->GetCluster(boneIndex);
 			// A line is a joint
 			string boneName = fbxCluster->GetLink()->GetName();
-			int jointIndex = skeleton->FindJointIndexByName(boneName);
+			Bone* bone = skeleton->FindBoneByName(boneName);
 
 			FbxAMatrix transformMatrix;
 			FbxAMatrix transformLinkMatrix;
@@ -91,7 +91,7 @@ void AnimationImporter::ReadAnimCurves(FbxNode* node)
 			//skeleton->bones[jointIndex].globalBindposeInverseMatrix =
 			//	globalBindposeInverseMatrix;
 			// The link node is the bone?
-			skeleton->bones[jointIndex].linkedNode = fbxCluster->GetLink();
+			bone->fbxNode = fbxCluster->GetLink();
 			
 			//PrintTab("Bone linked node: ");
 			//PrintTab(fbxCluster->GetLink()->GetName());

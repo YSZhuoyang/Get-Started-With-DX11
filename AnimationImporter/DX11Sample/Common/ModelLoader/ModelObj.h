@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <string>
 #include <fbxsdk.h>
 
 #include "pch.h"
@@ -12,9 +13,20 @@ using namespace std;
 using namespace Microsoft::WRL;
 using namespace DX11Sample;
 using namespace DirectX;
+using namespace DX;
 
 namespace ModelImporter
 {
+	// Used for reading weights
+	struct VertexWeight
+	{
+	public:
+		pair<int, float> boneWeight[4];
+
+		void AddBoneData(unsigned int index, float weight);
+		void Normalize();
+	};
+
 	// Change name Bone to Joint, linkedNode to bone?
 	struct Bone
 	{
@@ -23,8 +35,10 @@ namespace ModelImporter
 		int parentIndex;
 		string name;
 		//FbxAMatrix globalBindposeInverseMatrix;
-		XMFLOAT4X4 globalBindposeMatrix;
-		FbxNode* linkedNode;
+		XMFLOAT4X4 globalBoneBaseMatrix;
+		FbxNode* fbxNode;
+
+		XMFLOAT4X4 GetBoneMatrix(float frame);
 	};
 
 	struct Skeleton
@@ -32,7 +46,7 @@ namespace ModelImporter
 	public:
 		vector<Bone> bones;
 
-		int FindJointIndexByName(string boneName);
+		Bone* FindBoneByName(string boneName);
 	};
 
 	struct MeshEntry
@@ -43,6 +57,7 @@ namespace ModelImporter
 		double numVertices,
 		double numIndices);*/
 		void InitResources(ID3D11Device3* device);
+		XMFLOAT4X4 GetMeshMatrix(float frame);
 
 		ComPtr<ID3D11Buffer> vertexBuffer;
 		ComPtr<ID3D11Buffer> indexBuffer;
@@ -56,6 +71,11 @@ namespace ModelImporter
 		vector<Vertex> vertices;
 		vector<unsigned int> indices;
 
+		FbxNode* fbxNode;
+		XMFLOAT4X4 globalMeshBaseMatrix;
+
+		//Skeleton skeleton;
+
 		//D3D11_INPUT_ELEMENT_DESC vertexDesc[];
 	};
 
@@ -68,8 +88,9 @@ namespace ModelImporter
 		void Release();
 
 		Skeleton* skeleton;
+		//FbxScene* fbxScene;
 		vector<MeshEntry> entries;
-
+		//map<string, int> nodeInfo;
 
 	private:
 		void PrintNode(FbxNode* node);

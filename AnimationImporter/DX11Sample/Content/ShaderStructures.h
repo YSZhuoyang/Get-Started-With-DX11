@@ -1,27 +1,35 @@
 ﻿#pragma once
+#include "Common\DeviceResources.h"
+
+using namespace DX;
+using namespace DirectX;
 
 namespace DX11Sample
 {
-	struct BoneWeight
-	{
-		int index;
-		float weight;
-	};
-
 	// Constant buffer used to send MVP matrices to the vertex shader.
 	struct ModelViewProjectionConstantBuffer
 	{
-		DirectX::XMFLOAT4X4 model;
-		DirectX::XMFLOAT4X4 view;
-		DirectX::XMFLOAT4X4 projection;
+		XMFLOAT4X4 model;
+		XMFLOAT4X4 view;
+		XMFLOAT4X4 projection;
 	};
 
-	// Used to send per-vertex data to the vertex shader.
-	struct VertexPositionColor
+	struct AnimationConstantBuffer
 	{
-		DirectX::XMFLOAT3 pos;
-		DirectX::XMFLOAT3 color;
+		XMFLOAT4X4 meshBoneMatrices[MAXBONE];
 	};
+
+	/*struct MeshAnimationConstantBuffer
+	{
+		XMFLOAT4X4 meshMatrix;
+	};*/
+
+	// Used to send per-vertex data to the vertex shader.
+	/*struct VertexPositionColor
+	{
+		XMFLOAT3 pos;
+		XMFLOAT3 color;
+	};*/
 
 	struct Vertex
 	{
@@ -32,11 +40,13 @@ namespace DX11Sample
 			pos.z = z;
 		}*/
 
-		DirectX::XMFLOAT3 pos;
-		DirectX::XMFLOAT3 normal;
-		DirectX::XMFLOAT2 uv;
-
+		XMFLOAT3 pos;
+		XMFLOAT3 normal;
+		XMFLOAT2 uv;
+		
 		//vector<BoneWeight> weight;
-		BoneWeight weight[4];
+		XMUINT4 boneIndices;
+		XMFLOAT4 weights;
+		//BoneWeight weight[4];
 	};
 }

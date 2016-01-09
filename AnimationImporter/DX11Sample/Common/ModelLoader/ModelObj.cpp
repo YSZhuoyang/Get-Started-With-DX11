@@ -19,23 +19,83 @@ ModelObj::ModelObj() :
 	skeleton = new Skeleton();
 }
 
-int Skeleton::FindJointIndexByName(string boneName)
+void VertexWeight::AddBoneData(unsigned int index, float weight)
 {
-	int jointIndex = 0;
-
-	for (vector<Bone>::iterator it = bones.begin(); it != bones.end(); ++it)
+	for (int i = 0; i < MAXBONEPERVERTEX; i++)
 	{
-		if (it->name == boneName)
+		// Add data in descending order
+		if (boneWeight[i].second < weight)
 		{
-			return jointIndex;
-		}
+			for (int j = MAXBONEPERVERTEX - 2; j >= i; j--)
+			{
+				boneWeight[j + 1] = boneWeight[j];
+			}
 
-		jointIndex++;
+			boneWeight[i].second = weight;
+			break;
+		}
+	}
+}
+
+void VertexWeight::Normalize()
+{
+	float total = 0.0f;
+
+	for (int i = 0; i < MAXBONEPERVERTEX; i++)
+	{
+		if (boneWeight[i].second != 0.0f)
+		{
+			total += boneWeight[i].second;
+		}
 	}
 
-	PrintTab("Joint not found!");
+	if (total != 0.0f)
+	{
+		for (int i = 0; i < MAXBONEPERVERTEX; i++)
+		{
+			boneWeight[i].second /= total;
+		}
+	}
+}
 
-	return -1;
+Bone* Skeleton::FindBoneByName(string boneName)
+{
+	for (vector<Bone>::iterator it = bones.begin(); it != bones.end(); ++it)
+	{
+		if (it->name.compare(boneName) == 0)
+		{
+			return &(*it);
+		}
+	}
+
+	PrintTab("Bone not found!");
+
+	return nullptr;
+}
+
+XMFLOAT4X4 Bone::GetBoneMatrix(float frame)
+{
+	FbxTime time;
+
+	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * frame);
+
+	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time);
+	XMFLOAT4X4 currMatrix;
+
+	for (int r = 0; r < 4; r++)
+		for (int c = 0; c < 4; c++)
+		{
+			currMatrix.m[r][c] = (float)fbxCurrMatrix.mData[r][c];
+
+			PrintTab("Global bone mat: " + to_string(currMatrix.m[r][c]));
+		}
+
+	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&currMatrix), XMLoadFloat4x4(&globalBoneBaseMatrix));
+	XMFLOAT4X4 outMatrix;
+
+	XMStoreFloat4x4(&outMatrix, matrix);
+
+	return outMatrix;
 }
 
 void MeshEntry::InitResources(ID3D11Device3* device)
@@ -74,6 +134,31 @@ void MeshEntry::InitResources(ID3D11Device3* device)
 	PrintTab("End init resources of a mesh");
 }
 
+XMFLOAT4X4 MeshEntry::GetMeshMatrix(float frame)
+{
+	FbxTime time;
+	
+	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * frame);
+
+	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time);
+	XMFLOAT4X4 currMatrix;
+
+	for (int r = 0; r < 4; r++)
+		for (int c = 0; c < 4; c++)
+		{
+			currMatrix.m[r][c] = (float)fbxCurrMatrix.mData[r][c];
+
+			PrintTab("Global mesh mat: " + to_string(currMatrix.m[r][c]));
+		}
+	
+	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&currMatrix), XMLoadFloat4x4(&globalMeshBaseMatrix));
+	XMFLOAT4X4 outMatrix;
+
+	XMStoreFloat4x4(&outMatrix, matrix);
+
+	return outMatrix;
+}
+
 void ModelObj::InitMesh(ID3D11Device3* device)
 {
 	PrintTab("Start init mesh");
@@ -93,6 +178,27 @@ void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleS
 
 	for (vector<MeshEntry>::iterator mesh = entries.begin(); mesh != entries.end(); ++mesh)
 	{
+		// Update constant buffer data
+		/*context->UpdateSubresource1(
+			mesh->meshConstantBuffer.Get(),
+			0,
+			NULL,
+			&m_constantBufferData,
+			0,
+			0,
+			0
+			);
+
+		// Bind constant buffer for animations
+		context->VSSetConstantBuffers1(
+			0,// change
+			1,
+			mesh->meshConstantBuffer.GetAddressOf(),
+			nullptr,
+			nullptr
+			);*/
+
+		// Bind vertex buffer
 		context->IASetVertexBuffers(
 			0,
 			1,

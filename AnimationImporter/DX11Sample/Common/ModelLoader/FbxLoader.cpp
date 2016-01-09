@@ -45,6 +45,8 @@ void FbxLoader::LoadFbxModel(const char* fileName, ModelObj* model, ID3D11Device
 	PrintTab("Start load file");
 
 	//Clear();
+
+	//model->fbxScene = scene;
 	
 	// Use the first argument as the filename for the importer
 	if (!importer->Initialize(fileName, -1, fbxManager->GetIOSettings()))
