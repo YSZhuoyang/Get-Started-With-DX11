@@ -63,12 +63,13 @@ Bone* Skeleton::FindBoneByName(string boneName)
 	for (vector<Bone>::iterator it = bones.begin(); it != bones.end(); ++it)
 	{
 		if (it->name.compare(boneName) == 0)
+		//if (strcmp(it->name.c_str(), boneName.c_str()) == 0)
 		{
 			return &(*it);
 		}
 	}
 
-	PrintTab("Bone not found!");
+	//PrintTab("Bone not found!");
 
 	return nullptr;
 }
@@ -169,6 +170,26 @@ void ModelObj::InitMesh(ID3D11Device3* device)
 	}
 
 	PrintTab("End init mesh");
+}
+
+void ModelObj::InitAnimationData()
+{
+	// Only bone matrix loaded
+	for (unsigned short i = 0; i < MAXBONE; i++)
+	{
+		if (i < skeleton->bones.size())
+		{
+			//XMMatrixMultiply(StoreMatrix);
+			//animMatrixBufferData.meshBoneMatrices[i] = globalRootTransform * skeleton->bones[i].globalBoneBaseMatrix;
+			animMatrixBufferData.meshBoneMatrices[i] = skeleton->bones[i].globalBoneBaseMatrix;
+
+			PrintTab("Bone Mat: " + to_string(animMatrixBufferData.meshBoneMatrices[i].m[0][0]));
+		}
+		else
+		{
+			XMStoreFloat4x4(&animMatrixBufferData.meshBoneMatrices[i], XMMatrixIdentity());
+		}
+	}
 }
 
 void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState)

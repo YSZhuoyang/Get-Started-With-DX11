@@ -38,6 +38,14 @@ void MeshImporter::LoadMesh(FbxScene* scene, ID3D11Device3* device,
 
 		PrintTab("Number of nodes: " + to_string(numNodes));
 
+		FbxAMatrix fbxGlobalRootTransform = root->EvaluateGlobalTransform();
+		
+		for (int r = 0; r < 4; r++)
+			for (int c = 0; c < 4; c++)
+			{
+				model->globalRootTransform.m[r][c] = fbxGlobalRootTransform.mData[r][c];
+			}
+
 		LoadNodeMesh(root, device, context);
 	}
 
@@ -127,9 +135,10 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		mesh.fbxNode = node;
 		mesh.globalMeshBaseMatrix = globalMeshBaseMatrix;
 
+		// Load materials and textures
 		LoadMaterials(node, &mesh, device, context);
 
-		// Test load weights
+		// Load weights
 		LoadWeight(fbxMesh, &mesh);
 
 		model->entries.push_back(mesh);
@@ -139,8 +148,6 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 
 	for (int i = 0; i < numChild; i++)
 	{
-		//model->nodeInfo.insert({ node->GetChildName(i), i });
-		
 		LoadNodeMesh(node->GetChild(i), device, context);
 	}
 }
@@ -255,14 +262,10 @@ void MeshImporter::LoadWeight(FbxMesh* fbxMesh, MeshEntry* mesh)
 
 	assert(numSkin == 1);
 
-	using BoneWeight = pair<int, float>;
-	
 	// Assume only one deformer
 	FbxSkin* fbxSkin = static_cast<FbxSkin*>(fbxMesh->GetDeformer(0, FbxDeformer::eSkin));
 	int numCluster = fbxSkin->GetClusterCount();
 	int numControlPoints = fbxMesh->GetControlPointsCount();
-
-	//vector<vector<BoneWeight>> tmpWeightList(numControlPoints);
 	vector<VertexWeight> tmpWeightList(numControlPoints);
 
 	for (int i = 0; i < numCluster; i++)
@@ -271,121 +274,57 @@ void MeshImporter::LoadWeight(FbxMesh* fbxMesh, MeshEntry* mesh)
 
 		assert(fbxCluster->GetLinkMode() == FbxCluster::eNormalize);
 
-		// Read bone name into list
-		//boneNameList.push_back(fbxCluster->GetLink()->GetName());
-		
 		int numIndexInCluster = fbxCluster->GetControlPointIndicesCount();
 		int* indicesInCluster = fbxCluster->GetControlPointIndices();
 		double* weights = fbxCluster->GetControlPointWeights();
 
 		for (int j = 0; j < numIndexInCluster; j++)
 		{
-			//BoneWeight boneWeight(i, weights[j]);
-
-			//tmpWeightList[indicesInCluster[j]].push_back(boneWeight);
 			tmpWeightList[indicesInCluster[j]].AddBoneData(i, weights[j]);
 		}
 
-		// Sort by weight
-		//for (auto& eachVertWeights : tmpWeightList)
-		for (int inVert = 0; inVert < tmpWeightList.size(); inVert++)
+		// Normalize weights
+		/*for (int inVert = 0; inVert < tmpWeightList.size(); inVert++)
 		{
-			//tmpWeightList[inVert].Normalize();
-
-			//vector<BoneWeight> eachVertWeights = tmpWeightList[inVert];
-
-			/*sort(eachVertWeights->begin(), eachVertWeights->end(),
-				[](const BoneWeight& weightA, const BoneWeight& weightB)
-			{
-				return weightA.second > weightB.second;
-			});
-
-			// Only 4 weight data at most for each vertex
-			while (eachVertWeights->size() > MAXBONEPERVERTEX)
-			{
-				eachVertWeights->pop_back();
-			}
-
-			// Fill in empty data
-			while (eachVertWeights->size() < MAXBONEPERVERTEX)
-			{
-				BoneWeight emptyData(0, 0.0f);
-
-				eachVertWeights->push_back(emptyData);
-			}
-
-			float total = 0.0f;
-
-			for (auto it = eachVertWeights->begin(); it != eachVertWeights->end(); it++)
-			{
-				total += it->second;
-			}
-
-			/*for (int weightIndex = 0; weightIndex < MAXBONEPERVERTEX; weightIndex++)
-			{
-				total += eachVertWeights[weightIndex].second;
-			}*/
-
-			// Normalize weight
-			/*for (auto it = eachVertWeights->begin(); it != eachVertWeights->end(); it++)
-			{
-				it->second /= total;
-			}*/
-			
-			/*for (int weightIndex = 0; weightIndex < MAXBONEPERVERTEX; weightIndex++)
-			{
-				eachVertWeights[weightIndex].second /= total;
-			}*/
-
-			// For testing
-			//tmpWeightList[inVert] = eachVertWeights;
-
-			//PrintTab("weight: " + to_string(eachVertWeights[0].weight));
-		}
+			tmpWeightList[inVert].Normalize();
+		}*/
 
 		// Read skeleton bones data (transformation matrix of each bone)
 		string boneName(fbxCluster->GetLink()->GetName());
 
 		if (!model->skeleton->FindBoneByName(boneName))
 		{
-			XMFLOAT4X4 baseposeMat;
-			FbxAMatrix fbxBaseposeMat = fbxCluster->GetLink()->EvaluateGlobalTransform();
+			XMFLOAT4X4 globalBoneBaseMatrix;
+			FbxAMatrix fbxGlobalBoneBaseMatrix = fbxCluster->GetLink()->EvaluateGlobalTransform();
 
 			for (int r = 0; r < 4; r++)
 				for (int c = 0; c < 4; c++)
 				{
-					baseposeMat.m[r][c] = (float)fbxBaseposeMat.mData[r][c];
+					globalBoneBaseMatrix.m[r][c] = (float)fbxGlobalBoneBaseMatrix.mData[r][c];
 
 					//PrintTab("Global mat: " + to_string(baseposeMat.m[r][c]));
 				}
 
 			Bone bone;
 			bone.name = boneName;
-			bone.globalBoneBaseMatrix = baseposeMat;
+			bone.globalBoneBaseMatrix = globalBoneBaseMatrix;
 			bone.boneIndex = model->skeleton->bones.size();
 
-			model->skeleton->bones.push_back(bone);
+			if (model->skeleton->bones.size() > MAXBONE)
+			{
+				PrintTab("Too many bones to load!!");
+			}
+			else
+			{
+				//model->skeleton->bones[model->skeleton->bones.size()] = bone;
+				model->skeleton->bones.push_back(bone);
+			}
 		}
 	}
 
 	// Deployed in the index
 	for (unsigned int i = 0; i < mesh->vertices.size(); i++)
 	{
-		/*for (auto it = tmpWeightList[mesh->indices[i]].begin(); it != tmpWeightList[mesh->indices[i]].end(); it++)
-		{
-			PrintTab("W: " + to_string(it->first));
-		}*/
-
-		/*mesh->vertices[i].boneIndices.x = tmpWeightList[mesh->indices[i]][0].first;
-		mesh->vertices[i].boneIndices.y = tmpWeightList[mesh->indices[i]][1].first;
-		mesh->vertices[i].boneIndices.z = tmpWeightList[mesh->indices[i]][2].first;
-		mesh->vertices[i].boneIndices.w = tmpWeightList[mesh->indices[i]][3].first;
-
-		mesh->vertices[i].weights.x = tmpWeightList[mesh->indices[i]][0].second;
-		mesh->vertices[i].weights.y = tmpWeightList[mesh->indices[i]][1].second;
-		mesh->vertices[i].weights.z = tmpWeightList[mesh->indices[i]][2].second;
-		mesh->vertices[i].weights.w = tmpWeightList[mesh->indices[i]][3].second;*/
-
 		mesh->vertices[i].boneIndices.x = tmpWeightList[mesh->indices[i]].boneWeight[0].first;
 		mesh->vertices[i].boneIndices.y = tmpWeightList[mesh->indices[i]].boneWeight[1].first;
 		mesh->vertices[i].boneIndices.z = tmpWeightList[mesh->indices[i]].boneWeight[2].first;
@@ -397,11 +336,7 @@ void MeshImporter::LoadWeight(FbxMesh* fbxMesh, MeshEntry* mesh)
 		mesh->vertices[i].weights.w = tmpWeightList[mesh->indices[i]].boneWeight[3].second;
 
 		//PrintTab("Weight: " + to_string(mesh->vertices[i].weights.x));
-
-		//boneWeightList.push_back(boneWeightListControlPoints[index]);
 	}
-	
-	//model->skeleton->bones = tmpBones;
 }
 
 void MeshImporter::LoadMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* device,

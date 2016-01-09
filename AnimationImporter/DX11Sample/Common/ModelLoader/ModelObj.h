@@ -21,62 +21,52 @@ namespace ModelImporter
 	struct VertexWeight
 	{
 	public:
-		pair<int, float> boneWeight[4];
-
 		void AddBoneData(unsigned int index, float weight);
 		void Normalize();
+
+		pair<int, float> boneWeight[4];
 	};
 
 	// Change name Bone to Joint, linkedNode to bone?
 	struct Bone
 	{
 	public:
+		XMFLOAT4X4 GetBoneMatrix(float frame);
+
 		int boneIndex;
 		int parentIndex;
 		string name;
 		//FbxAMatrix globalBindposeInverseMatrix;
 		XMFLOAT4X4 globalBoneBaseMatrix;
 		FbxNode* fbxNode;
-
-		XMFLOAT4X4 GetBoneMatrix(float frame);
 	};
 
 	struct Skeleton
 	{
 	public:
-		vector<Bone> bones;
-
 		Bone* FindBoneByName(string boneName);
+
+		vector<Bone> bones;
 	};
 
 	struct MeshEntry
 	{
-		/*void Init(
-		const vector<Vertex>& Vertices,
-		const vector<int>& indices,
-		double numVertices,
-		double numIndices);*/
+	public:
 		void InitResources(ID3D11Device3* device);
 		XMFLOAT4X4 GetMeshMatrix(float frame);
+
+		unsigned int numIndices;
+		unsigned int numVertices;
 
 		ComPtr<ID3D11Buffer> vertexBuffer;
 		ComPtr<ID3D11Buffer> indexBuffer;
 		ComPtr<ID3D11ShaderResourceView> srv;
-		//ComPtr<ID3D11InputLayout> m_inputLayout;
-
-		unsigned int numIndices;
-		unsigned int numVertices;
-		//unsigned int materialIndex;
 
 		vector<Vertex> vertices;
 		vector<unsigned int> indices;
 
 		FbxNode* fbxNode;
 		XMFLOAT4X4 globalMeshBaseMatrix;
-
-		//Skeleton skeleton;
-
-		//D3D11_INPUT_ELEMENT_DESC vertexDesc[];
 	};
 
 	class ModelObj
@@ -84,13 +74,16 @@ namespace ModelImporter
 	public:
 		ModelObj();
 		void InitMesh(ID3D11Device3* device);
+		void InitAnimationData();
 		void Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState);
 		void Release();
 
+		XMFLOAT4X4 globalRootTransform;
+
 		Skeleton* skeleton;
-		//FbxScene* fbxScene;
 		vector<MeshEntry> entries;
-		//map<string, int> nodeInfo;
+		AnimationConstantBuffer animMatrixBufferData;
+		ComPtr<ID3D11Buffer> animConstantBuffer;
 
 	private:
 		void PrintNode(FbxNode* node);
