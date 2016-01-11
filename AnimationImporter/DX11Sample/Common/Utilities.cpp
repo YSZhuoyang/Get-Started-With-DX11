@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "Utilities.h"
 
-using namespace std;
 
 namespace Utilities
 {
@@ -17,6 +16,17 @@ namespace Utilities
 		const FbxVector4 s = node->GetGeometricScaling(FbxNode::eSourcePivot);
 
 		return FbxAMatrix(t, r, s);
+	}
+
+	void ConvertFbxAMatrixToDXMatrix(XMFLOAT4X4* outMatrix, FbxAMatrix fbxAMatrix)
+	{
+		for (int r = 0; r < 4; r++)
+		{
+			for (int c = 0; c < 4; c++)
+			{
+				outMatrix->m[r][c] = (float)fbxAMatrix.Get(r, c);
+			}
+		}
 	}
 }
 

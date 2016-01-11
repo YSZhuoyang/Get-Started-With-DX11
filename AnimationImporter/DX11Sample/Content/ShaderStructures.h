@@ -14,6 +14,13 @@ namespace DX11Sample
 		XMFLOAT4X4 projection;
 	};
 
+	// VP matrices used by camera
+	struct ViewProjectionConstantBuffer
+	{
+		XMFLOAT4X4 view;
+		XMFLOAT4X4 projection;
+	};
+
 	// Animation transform data
 	struct AnimationConstantBuffer
 	{

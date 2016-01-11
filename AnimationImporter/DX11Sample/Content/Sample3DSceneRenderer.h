@@ -46,7 +46,11 @@ namespace DX11Sample
 		uint32	m_indexCount;
 
 		// Test object loader
+		// To be changed to a vector storing models
 		ModelObj model;
+		// vector<ModelObj> models;
+
+		FbxLoader fbxLoader;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;

@@ -4,7 +4,6 @@
 #include "..\Common\DirectXHelper.h"
 
 using namespace DX11Sample;
-
 using namespace DirectX;
 using namespace Windows::Foundation;
 
@@ -59,7 +58,7 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 		);
 
 	// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
-	static const XMVECTORF32 eye = { 0.0f, 0.7f, 3.0f, 0.0f };
+	static const XMVECTORF32 eye = { 0.0f, 14.0f, 60.0f, 0.0f };//{ 0.0f, 0.7f, 3.0f, 0.0f };
 	//static const XMVECTORF32 eye = { 1.0f, 2.0f, 10.5f, 0.0f };
 	static const XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
 	//static const XMVECTORF32 at = { 1.0f, 1.0f, 1.0f, 0.0f };
@@ -80,6 +79,8 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 
 		Rotate(radians);
 	}
+
+	//model.Update(timer);
 }
 
 // Rotate the 3D cube model a set amount of radians.
@@ -163,8 +164,6 @@ void Sample3DSceneRenderer::Render()
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
 	// Test object loader
-	FbxLoader fbxLoader;
-
 	fbxLoader.LoadFbxModel("Assets\\WalkingMan\\WalkingMan.fbx",
 		&model, 
 		m_deviceResources->GetD3DDevice(),
@@ -173,7 +172,8 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 	//Assets\\wu.FBX
 	//Assets\\Wooden_House.fbx
 	//Assets\\farm_house\\Autodesk\\Farmhouse.fbx
-
+	//Assets\\WalkingMan\\WalkingMan.fbx
+	//Assets\\unitychan.fbx
 
 	// Load shaders asynchronously.
 	auto loadVSTask = DX::ReadDataAsync(L"SampleVertexShader.cso");
@@ -222,6 +222,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 			);
 
 		CD3D11_BUFFER_DESC constantBufferDesc(sizeof(ModelViewProjectionConstantBuffer) , D3D11_BIND_CONSTANT_BUFFER);
+
 		DX::ThrowIfFailed(
 			m_deviceResources->GetD3DDevice()->CreateBuffer(
 				&constantBufferDesc,
@@ -236,7 +237,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 	{
 		// Test model loader
 		model.InitMesh(m_deviceResources->GetD3DDevice());
-		model.InitAnimationData();
+		model.InitAnimationData(m_deviceResources->GetD3DDevice());
 	});
 
 	// Once the cube is loaded, the object is ready to be rendered.

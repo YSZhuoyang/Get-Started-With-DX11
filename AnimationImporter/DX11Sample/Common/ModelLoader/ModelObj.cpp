@@ -3,10 +3,13 @@
 #include <string>
 
 #include "ModelObj.h"
+#include "Common\Utilities.h"
+
 
 using namespace ModelImporter;
 using namespace DirectX;
 using namespace DX;
+using namespace Utilities;
 using namespace std;
 using namespace Windows;
 
@@ -28,10 +31,15 @@ void VertexWeight::AddBoneData(unsigned int index, float weight)
 		{
 			for (int j = MAXBONEPERVERTEX - 2; j >= i; j--)
 			{
-				boneWeight[j + 1] = boneWeight[j];
+				//boneWeight[j + 1] = boneWeight[j];
+
+				boneWeight[j + 1].first = boneWeight[j].first;
+				boneWeight[j + 1].second = boneWeight[j].second;
 			}
 
+			boneWeight[i].first = index;
 			boneWeight[i].second = weight;
+
 			break;
 		}
 	}
@@ -74,22 +82,25 @@ Bone* Skeleton::FindBoneByName(string boneName)
 	return nullptr;
 }
 
-XMFLOAT4X4 Bone::GetBoneMatrix(float frame)
+XMFLOAT4X4 Bone::GetBoneMatrix(unsigned int frame)
 {
 	FbxTime time;
-
-	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * frame);
+	//PrintTab("Frame: " + to_string(frame));
+	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * (frame % 60));
+	//time.SetFrame(5 % 60, FbxTime::eFrames60);
 
 	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time);
 	XMFLOAT4X4 currMatrix;
 
-	for (int r = 0; r < 4; r++)
+	/*for (int r = 0; r < 4; r++)
 		for (int c = 0; c < 4; c++)
 		{
 			currMatrix.m[r][c] = (float)fbxCurrMatrix.mData[r][c];
 
 			PrintTab("Global bone mat: " + to_string(currMatrix.m[r][c]));
-		}
+		}*/
+
+	ConvertFbxAMatrixToDXMatrix(&currMatrix, fbxCurrMatrix);
 
 	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&currMatrix), XMLoadFloat4x4(&globalBoneBaseMatrix));
 	XMFLOAT4X4 outMatrix;
@@ -144,14 +155,16 @@ XMFLOAT4X4 MeshEntry::GetMeshMatrix(float frame)
 	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time);
 	XMFLOAT4X4 currMatrix;
 
-	for (int r = 0; r < 4; r++)
+	/*for (int r = 0; r < 4; r++)
 		for (int c = 0; c < 4; c++)
 		{
 			currMatrix.m[r][c] = (float)fbxCurrMatrix.mData[r][c];
 
 			PrintTab("Global mesh mat: " + to_string(currMatrix.m[r][c]));
-		}
+		}*/
 	
+	ConvertFbxAMatrixToDXMatrix(&currMatrix, fbxCurrMatrix);
+
 	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&currMatrix), XMLoadFloat4x4(&globalMeshBaseMatrix));
 	XMFLOAT4X4 outMatrix;
 
@@ -172,7 +185,7 @@ void ModelObj::InitMesh(ID3D11Device3* device)
 	PrintTab("End init mesh");
 }
 
-void ModelObj::InitAnimationData()
+void ModelObj::InitAnimationData(ID3D11Device3* device)
 {
 	// Only bone matrix loaded
 	for (unsigned short i = 0; i < MAXBONE; i++)
@@ -183,13 +196,28 @@ void ModelObj::InitAnimationData()
 			//animMatrixBufferData.meshBoneMatrices[i] = globalRootTransform * skeleton->bones[i].globalBoneBaseMatrix;
 			animMatrixBufferData.meshBoneMatrices[i] = skeleton->bones[i].globalBoneBaseMatrix;
 
-			PrintTab("Bone Mat: " + to_string(animMatrixBufferData.meshBoneMatrices[i].m[0][0]));
+			//PrintTab("Bone Mat: " + to_string(animMatrixBufferData.meshBoneMatrices[i].m[0][0]));
 		}
 		else
 		{
 			XMStoreFloat4x4(&animMatrixBufferData.meshBoneMatrices[i], XMMatrixIdentity());
 		}
+
+		//XMStoreFloat4x4(&animMatrixBufferData.meshBoneMatrices[i], XMMatrixIdentity());
 	}
+
+	// Put into the block of a asyn-task
+	// Create animation constant buffer
+	CD3D11_BUFFER_DESC constantBufferDesc(sizeof(AnimationConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
+	//constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	
+	DX::ThrowIfFailed(
+		device->CreateBuffer(
+			&constantBufferDesc,
+			nullptr,
+			&animConstantBuffer
+			)
+		);
 }
 
 void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState)
@@ -200,11 +228,11 @@ void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleS
 	for (vector<MeshEntry>::iterator mesh = entries.begin(); mesh != entries.end(); ++mesh)
 	{
 		// Update constant buffer data
-		/*context->UpdateSubresource1(
-			mesh->meshConstantBuffer.Get(),
+		context->UpdateSubresource1(
+			animConstantBuffer.Get(),
 			0,
 			NULL,
-			&m_constantBufferData,
+			&animMatrixBufferData,
 			0,
 			0,
 			0
@@ -212,12 +240,12 @@ void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleS
 
 		// Bind constant buffer for animations
 		context->VSSetConstantBuffers1(
-			0,// change
+			1,// change
 			1,
-			mesh->meshConstantBuffer.GetAddressOf(),
+			animConstantBuffer.GetAddressOf(),
 			nullptr,
 			nullptr
-			);*/
+			);
 
 		// Bind vertex buffer
 		context->IASetVertexBuffers(
@@ -246,6 +274,23 @@ void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleS
 			mesh->numIndices,
 			0,
 			0);*/
+	}
+}
+
+void ModelObj::Update(StepTimer const& timer)
+{
+	for (int i = 0; i < skeleton->bones.size(); i++)
+	{
+		XMFLOAT4X4 currMat = skeleton->bones[i].GetBoneMatrix(timer.GetFrameCount());
+		XMMATRIX boneMeshMatrix = XMMatrixMultiply(
+			XMMatrixTranspose(XMLoadFloat4x4(&skeleton->bones[i].globalBoneBaseMatrix)), 
+			XMMatrixTranspose(XMLoadFloat4x4(&currMat))
+			);
+
+		XMStoreFloat4x4(
+			&animMatrixBufferData.meshBoneMatrices[skeleton->bones[i].boneIndex], 
+			boneMeshMatrix
+			);
 	}
 }
 
@@ -335,19 +380,13 @@ void ModelObj::Clear()
 
 void ModelObj::Release()
 {
+	for (vector<MeshEntry>::iterator it = entries.begin(); it != entries.end(); ++it)
+	{
+		it->vertexBuffer.Reset();
+		it->srv.Reset();
+	}
 
+	animConstantBuffer.Reset();
 }
-
-/*void ModelObj::MeshEntry::Init(
-	const vector<Vertex>& Vertices, 
-	const vector<int>& Indices, 
-	double NumVertices, 
-	double NumIndices)
-{
-	vertices = Vertices;
-	indices = Indices;
-	numVertices = NumVertices;
-	numIndices = NumIndices;
-}*/
 
 

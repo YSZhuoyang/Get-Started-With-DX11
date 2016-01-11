@@ -6,13 +6,19 @@ cbuffer ModelViewProjectionConstantBuffer : register(b0)
 	matrix projection;
 };
 
+// A constant buffer storing animation bone data
+cbuffer AnimationConstantBuffer : register(b1)
+{
+	matrix meshBoneMatrices[50];
+}
+
 // Per-vertex data used as input to the vertex shader.
 struct VertexShaderInput
 {
 	float3 pos : POSITION;
 	float3 normal : NORMAL;
 	float2 uv : TEXCOORD0;
-	int4 boneIndices : BONEINDICES;
+	uint4 boneIndices : BONEINDICES;
 	float4 weights : WEIGHTS;
 };
 
@@ -29,6 +35,15 @@ PixelShaderInput main(VertexShaderInput input)
 {
 	PixelShaderInput output;
 	float4 pos = float4(input.pos, 1.0f);
+
+	// Test animations
+	matrix boneTransform = 
+		meshBoneMatrices[input.boneIndices.x] * input.weights.x +
+		meshBoneMatrices[input.boneIndices.y] * input.weights.y +
+		meshBoneMatrices[input.boneIndices.z] * input.weights.z +
+		meshBoneMatrices[input.boneIndices.w] * input.weights.w;
+	
+	pos = mul(pos, boneTransform);
 
 	// Transform the vertex position into projected space.
 	pos = mul(pos, model);

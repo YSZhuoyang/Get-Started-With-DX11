@@ -7,6 +7,7 @@
 #include "Content\ShaderStructures.h"
 #include "Common\DeviceResources.h"
 #include "Common\DirectXHelper.h"
+#include "Common\StepTimer.h"
 
 
 using namespace std;
@@ -24,14 +25,14 @@ namespace ModelImporter
 		void AddBoneData(unsigned int index, float weight);
 		void Normalize();
 
-		pair<int, float> boneWeight[4];
+		pair<unsigned int, float> boneWeight[4];
 	};
 
 	// Change name Bone to Joint, linkedNode to bone?
 	struct Bone
 	{
 	public:
-		XMFLOAT4X4 GetBoneMatrix(float frame);
+		XMFLOAT4X4 GetBoneMatrix(unsigned int frame);
 
 		int boneIndex;
 		int parentIndex;
@@ -59,7 +60,7 @@ namespace ModelImporter
 		unsigned int numVertices;
 
 		ComPtr<ID3D11Buffer> vertexBuffer;
-		ComPtr<ID3D11Buffer> indexBuffer;
+		//ComPtr<ID3D11Buffer> indexBuffer;
 		ComPtr<ID3D11ShaderResourceView> srv;
 
 		vector<Vertex> vertices;
@@ -74,11 +75,12 @@ namespace ModelImporter
 	public:
 		ModelObj();
 		void InitMesh(ID3D11Device3* device);
-		void InitAnimationData();
+		void InitAnimationData(ID3D11Device3* device);
 		void Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState);
+		void Update(StepTimer const& timer);
 		void Release();
 
-		XMFLOAT4X4 globalRootTransform;
+		XMFLOAT4X4 modelMatrix;
 
 		Skeleton* skeleton;
 		vector<MeshEntry> entries;
