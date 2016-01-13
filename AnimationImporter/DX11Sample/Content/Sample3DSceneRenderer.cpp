@@ -58,7 +58,7 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 		);
 
 	// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
-	static const XMVECTORF32 eye = { 0.0f, 14.0f, 60.0f, 0.0f };//{ 0.0f, 0.7f, 3.0f, 0.0f };
+	static const XMVECTORF32 eye = { 0.0f, 7.0f, 30.0f, 0.0f };//{ 0.0f, 0.7f, 3.0f, 0.0f };
 	//static const XMVECTORF32 eye = { 1.0f, 2.0f, 10.5f, 0.0f };
 	static const XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
 	//static const XMVECTORF32 at = { 1.0f, 1.0f, 1.0f, 0.0f };
@@ -80,7 +80,7 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		Rotate(radians);
 	}
 
-	//model.Update(timer);
+	model.Update(timer);
 }
 
 // Rotate the 3D cube model a set amount of radians.
@@ -264,7 +264,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 	DX::ThrowIfFailed(
 		m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &sampleState));
 	
-	// Turn off cull back
+	// Set to counter clock wise
 	/*ID3D11RasterizerState* m_rasterStateNoCulling;
 	D3D11_RASTERIZER_DESC rasterDesc;//D3D11_RASTERIZER_DESC2
 									 // Setup a raster description which turns off back face culling.

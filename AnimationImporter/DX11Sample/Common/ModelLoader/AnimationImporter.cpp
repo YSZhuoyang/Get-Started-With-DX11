@@ -119,7 +119,24 @@ void AnimationImporter::DisplayAnimation(FbxScene* scene, FbxImporter* fbxImport
 {
 	PrintTab("Start loading animation data");
 
-	for (int i = 0; i < scene->GetSrcObjectCount<FbxAnimStack>(); i++)
+	// The number of animation frames get 
+	auto AnimStackCount = fbxImporter->GetAnimStackCount();
+	
+	assert(AnimStackCount == 1);
+	
+	auto takeInfo = fbxImporter->GetTakeInfo(0);
+
+	auto importOffset = takeInfo->mImportOffset;
+	auto startTime = takeInfo->mLocalTimeSpan.GetStart();
+	auto stopTime = takeInfo->mLocalTimeSpan.GetStop();
+
+	int animationStartFrame = (importOffset.Get() + startTime.Get()) / FbxTime::GetOneFrameValue(FbxTime::eFrames60);
+	int animationEndFrame = (importOffset.Get() + stopTime.Get()) / FbxTime::GetOneFrameValue(FbxTime::eFrames60);
+
+	PrintTab("start: " + to_string(animationStartFrame));
+	PrintTab("end :" + to_string(animationEndFrame));
+
+	/*for (int i = 0; i < scene->GetSrcObjectCount<FbxAnimStack>(); i++)
 	{
 		FbxAnimStack* animStack = scene->GetSrcObject<FbxAnimStack>(i);
 
@@ -136,7 +153,7 @@ void AnimationImporter::DisplayAnimation(FbxScene* scene, FbxImporter* fbxImport
 		FbxTime startTime = animInfo->mLocalTimeSpan.GetStart();
 		FbxTime endTime = animInfo->mLocalTimeSpan.GetStop();
 		FbxTime duration = animInfo->mLocalTimeSpan.GetDuration();
-	}
+	}*/
 
 	PrintTab("End loading animation data");
 }

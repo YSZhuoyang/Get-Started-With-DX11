@@ -26,6 +26,17 @@ void VertexWeight::AddBoneData(unsigned int index, float weight)
 {
 	for (int i = 0; i < MAXBONEPERVERTEX; i++)
 	{
+		if (boneWeight[i].second == 0.0f)
+		{
+			boneWeight[i].first = index;
+			boneWeight[i].second = weight;
+
+			break;
+		}
+	}
+
+	/*for (int i = 0; i < MAXBONEPERVERTEX; i++)
+	{
 		// Add data in descending order
 		if (boneWeight[i].second < weight)
 		{
@@ -42,7 +53,7 @@ void VertexWeight::AddBoneData(unsigned int index, float weight)
 
 			break;
 		}
-	}
+	}*/
 }
 
 void VertexWeight::Normalize()
@@ -85,27 +96,28 @@ Bone* Skeleton::FindBoneByName(string boneName)
 XMFLOAT4X4 Bone::GetBoneMatrix(unsigned int frame)
 {
 	FbxTime time;
-	//PrintTab("Frame: " + to_string(frame));
-	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * (frame % 60));
-	//time.SetFrame(5 % 60, FbxTime::eFrames60);
+	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * (frame % 80));
 
-	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time);
+	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time).Transpose();
+
 	XMFLOAT4X4 currMatrix;
-
-	/*for (int r = 0; r < 4; r++)
+	
+	for (int r = 0; r < 4; r++)
 		for (int c = 0; c < 4; c++)
 		{
 			currMatrix.m[r][c] = (float)fbxCurrMatrix.mData[r][c];
 
-			PrintTab("Global bone mat: " + to_string(currMatrix.m[r][c]));
-		}*/
+			//PrintTab("Global bone mat: " + to_string(currMatrix.m[r][c]));
+		}
 
-	ConvertFbxAMatrixToDXMatrix(&currMatrix, fbxCurrMatrix);
+	//PrintTab("Global bone mat2: " + to_string(currMatrix.m[0][0]));
 
-	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&currMatrix), XMLoadFloat4x4(&globalBoneBaseMatrix));
+	//ConvertFbxAMatrixToDXMatrix(&currMatrix, fbxCurrMatrix);
+	
+	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&globalBoneBaseMatrix), XMLoadFloat4x4(&currMatrix));//XMLoadFloat4x4(&currMatrix) * XMLoadFloat4x4(&globalBoneBaseMatrix); //
 	XMFLOAT4X4 outMatrix;
-
-	XMStoreFloat4x4(&outMatrix, matrix);
+	
+	XMStoreFloat4x4(&outMatrix, matrix);//XMMatrixTranspose(matrix)
 
 	return outMatrix;
 }
@@ -146,29 +158,29 @@ void MeshEntry::InitResources(ID3D11Device3* device)
 	PrintTab("End init resources of a mesh");
 }
 
-XMFLOAT4X4 MeshEntry::GetMeshMatrix(float frame)
+XMFLOAT4X4 MeshEntry::GetMeshMatrix(unsigned int frame)
 {
 	FbxTime time;
 	
-	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * frame);
+	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * (frame % 80));
 
-	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time);
+	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time).Transpose();
 	XMFLOAT4X4 currMatrix;
 
-	/*for (int r = 0; r < 4; r++)
+	for (int r = 0; r < 4; r++)
 		for (int c = 0; c < 4; c++)
 		{
 			currMatrix.m[r][c] = (float)fbxCurrMatrix.mData[r][c];
 
-			PrintTab("Global mesh mat: " + to_string(currMatrix.m[r][c]));
-		}*/
+			//PrintTab("Global mesh mat: " + to_string(currMatrix.m[r][c]));
+		}
 	
-	ConvertFbxAMatrixToDXMatrix(&currMatrix, fbxCurrMatrix);
+	//ConvertFbxAMatrixToDXMatrix(&currMatrix, fbxCurrMatrix);
 
-	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&currMatrix), XMLoadFloat4x4(&globalMeshBaseMatrix));
+	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&globalMeshBaseMatrix), XMLoadFloat4x4(&currMatrix));//XMLoadFloat4x4(&currMatrix) * XMLoadFloat4x4(&globalMeshBaseMatrix);
 	XMFLOAT4X4 outMatrix;
-
-	XMStoreFloat4x4(&outMatrix, matrix);
+	
+	XMStoreFloat4x4(&outMatrix, matrix);//XMMatrixTranspose(matrix)
 
 	return outMatrix;
 }
@@ -180,6 +192,11 @@ void ModelObj::InitMesh(ID3D11Device3* device)
 	for (unsigned int i = 0; i < entries.size(); i++)
 	{
 		entries[i].InitResources(device);
+
+
+
+		// For testing
+		animMatrixBufferData.meshMatrix = entries[i].globalMeshBaseMatrix;
 	}
 
 	PrintTab("End init mesh");
@@ -194,16 +211,15 @@ void ModelObj::InitAnimationData(ID3D11Device3* device)
 		{
 			//XMMatrixMultiply(StoreMatrix);
 			//animMatrixBufferData.meshBoneMatrices[i] = globalRootTransform * skeleton->bones[i].globalBoneBaseMatrix;
+			
 			animMatrixBufferData.meshBoneMatrices[i] = skeleton->bones[i].globalBoneBaseMatrix;
-
+			
 			//PrintTab("Bone Mat: " + to_string(animMatrixBufferData.meshBoneMatrices[i].m[0][0]));
 		}
 		else
 		{
-			XMStoreFloat4x4(&animMatrixBufferData.meshBoneMatrices[i], XMMatrixIdentity());
+			//XMStoreFloat4x4(&animMatrixBufferData.meshBoneMatrices[i], XMMatrixIdentity());
 		}
-
-		//XMStoreFloat4x4(&animMatrixBufferData.meshBoneMatrices[i], XMMatrixIdentity());
 	}
 
 	// Put into the block of a asyn-task
@@ -281,17 +297,11 @@ void ModelObj::Update(StepTimer const& timer)
 {
 	for (int i = 0; i < skeleton->bones.size(); i++)
 	{
-		XMFLOAT4X4 currMat = skeleton->bones[i].GetBoneMatrix(timer.GetFrameCount());
-		XMMATRIX boneMeshMatrix = XMMatrixMultiply(
-			XMMatrixTranspose(XMLoadFloat4x4(&skeleton->bones[i].globalBoneBaseMatrix)), 
-			XMMatrixTranspose(XMLoadFloat4x4(&currMat))
-			);
-
-		XMStoreFloat4x4(
-			&animMatrixBufferData.meshBoneMatrices[skeleton->bones[i].boneIndex], 
-			boneMeshMatrix
-			);
+		animMatrixBufferData.meshBoneMatrices[skeleton->bones[i].boneIndex] =
+			skeleton->bones[i].GetBoneMatrix(timer.GetFrameCount());
 	}
+
+	animMatrixBufferData.meshMatrix = entries[0].GetMeshMatrix(timer.GetFrameCount());
 }
 
 void ModelObj::PrintNode(FbxNode* node)

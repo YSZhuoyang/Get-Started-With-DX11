@@ -35,12 +35,13 @@ void MeshImporter::LoadMesh(FbxScene* scene, ID3D11Device3* device,
 		// Root node is included
 		numNodes = root->GetChildCount(true) + 1;
 
+		model->numMesh = scene->GetMemberCount<FbxMesh>();
 		model->entries.clear();
-		model->entries.reserve(numNodes);
+		model->entries.reserve(model->numMesh);
 
 		PrintTab("Number of nodes: " + to_string(numNodes));
 
-		FbxAMatrix fbxGlobalRootTransform = root->EvaluateGlobalTransform();
+		//FbxAMatrix fbxGlobalRootTransform = root->EvaluateGlobalTransform();
 		
 		/*for (int r = 0; r < 4; r++)
 			for (int c = 0; c < 4; c++)
@@ -69,7 +70,7 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		
 		// Create meshes
 		FbxMesh* fbxMesh = node->GetMesh();
-
+		
 		numPolygons = fbxMesh->GetPolygonCount();
 		numIndices = fbxMesh->GetPolygonVertexCount();
 		numVertices = fbxMesh->GetControlPointsCount();
@@ -92,9 +93,9 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		{
 			indices[i] = indices_array[i];
 
-			vertices[i].pos.x = (float)fbxMesh->GetControlPointAt(indices[i]).mData[0];// / 10000.0f;
-			vertices[i].pos.y = (float)fbxMesh->GetControlPointAt(indices[i]).mData[1];// / 10000.0f;
-			vertices[i].pos.z = (float)fbxMesh->GetControlPointAt(indices[i]).mData[2];// / 10000.0f;
+			vertices[i].pos.x = (float)fbxMesh->GetControlPointAt(indices[i]).mData[0];// / 1000.0f;
+			vertices[i].pos.y = (float)fbxMesh->GetControlPointAt(indices[i]).mData[1];// / 1000.0f;
+			vertices[i].pos.z = (float)fbxMesh->GetControlPointAt(indices[i]).mData[2];// / 1000.0f;
 		}
 
 		// For indexed drawing
@@ -107,29 +108,28 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 
 		LoadUV(fbxMesh, &vertices[0], &indices[0]);
 
-		// Set to be clockwise, must be done after reading uvs and normals
-		for (auto it = vertices.begin(); it != vertices.end(); it += 3)
-		{
-			std::swap(*it, *(it + 2));
-		}
-
 		//OutputDebugStringA(("\n number of polygons: " + to_string(numPolygons) + " \n").c_str());
 		//OutputDebugStringA(("\n number of indices: " + to_string(numIndices) + " \n").c_str());
 		//OutputDebugStringA(("\n number of vertices: " + to_string(vertices.size()) + " \n").c_str());
 
 		// Read mesh base transform matrix
-		FbxAMatrix fbxGlobalMeshBaseMatrix = node->EvaluateGlobalTransform();
+		FbxAMatrix fbxGlobalMeshBaseMatrix = node->EvaluateGlobalTransform().Inverse().Transpose();
 		XMFLOAT4X4 globalMeshBaseMatrix;
 
-		/*for (int r = 0; r < 4; r++)
+		for (int r = 0; r < 4; r++)
+		{
+			//PrintTab("Global mesh base mat: " + to_string(fbxGlobalMeshBaseMatrix.mData[r][0]));
+
 			for (int c = 0; c < 4; c++)
 			{
-				//globalMeshBaseMatrix.m[r][c] = (float)fbxGlobalMeshBaseMatrix.mData[r][c];
+				globalMeshBaseMatrix.m[r][c] = (float)fbxGlobalMeshBaseMatrix.mData[r][c];
+			}
+		}
 
-				PrintTab("Global mesh base mat: " + to_string(fbxGlobalMeshBaseMatrix.mData[r][c]));
-			}*/
+		// To be considered when importing Maya fbx model
+		//FbxAMatrix geoMatrix = GetTransformMatrix(node);
 
-		ConvertFbxAMatrixToDXMatrix(&globalMeshBaseMatrix, fbxGlobalMeshBaseMatrix);
+		//ConvertFbxAMatrixToDXMatrix(&globalMeshBaseMatrix, fbxGlobalMeshBaseMatrix);
 
 		MeshEntry mesh;
 		mesh.vertices = vertices;
@@ -143,7 +143,13 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		LoadMaterials(node, &mesh, device, context);
 
 		// Load weights
-		LoadWeight(node, &mesh);
+		LoadWeight(fbxMesh, &mesh);
+
+		// Set to be clockwise, must be done after reading uvs, normals, weights and etc
+		for (auto it = mesh.vertices.begin(); it != mesh.vertices.end(); it += 3)
+		{
+			swap(*it, *(it + 2));
+		}
 
 		model->entries.push_back(mesh);
 	}
@@ -255,11 +261,10 @@ void MeshImporter::LoadUV(FbxMesh* fbxMesh, Vertex* vertices, unsigned int* indi
 	}
 }
 
-void MeshImporter::LoadWeight(FbxNode* fbxNode, MeshEntry* mesh)
+void MeshImporter::LoadWeight(FbxMesh* fbxMesh, MeshEntry* mesh)
 {
-	FbxMesh* fbxMesh = fbxNode->GetMesh();
 	int numSkin = fbxMesh->GetDeformerCount(FbxDeformer::eSkin);
-
+	
 	if (numSkin == 0)
 	{
 		return;
@@ -304,31 +309,33 @@ void MeshImporter::LoadWeight(FbxNode* fbxNode, MeshEntry* mesh)
 				// Normalize weights
 				/*for (int inVert = 0; inVert < tmpWeightList.size(); inVert++)
 				{
-				tmpWeightList[inVert].Normalize();
+					tmpWeightList[inVert].Normalize();
 				}*/
 
 				// Read animation bone matrix
 				XMFLOAT4X4 globalBoneBaseMatrix;
-				FbxAMatrix fbxGlobalBoneBaseMatrix = fbxCluster->GetLink()->EvaluateGlobalTransform();
+				FbxAMatrix fbxGlobalBoneBaseMatrix = fbxCluster->GetLink()->EvaluateGlobalTransform().Inverse().Transpose();
 
-				if (i == 0)
+				for (int r = 0; r < 4; r++)
 				{
-					for (int r = 0; r < 4; r++)
-						for (int c = 0; c < 4; c++)
-						{
-							//globalBoneBaseMatrix.m[r][c] = (float)fbxGlobalBoneBaseMatrix.mData[r][c];
+					//PrintTab("Global mat bone: " + to_string(fbxGlobalBoneBaseMatrix.mData[r][0]));
 
-							PrintTab("Global mat: " + to_string(fbxGlobalBoneBaseMatrix.mData[r][c]));
-						}
+					for (int c = 0; c < 4; c++)
+					{
+						globalBoneBaseMatrix.m[r][c] = (float)fbxGlobalBoneBaseMatrix.mData[r][c];
+					}
 				}
+
+				// To be considered when importing Maya fbx model
+				//FbxAMatrix geoMatrix = GetTransformMatrix(fbxCluster->GetLink());
 				
-				ConvertFbxAMatrixToDXMatrix(&globalBoneBaseMatrix, fbxGlobalBoneBaseMatrix);
+				//ConvertFbxAMatrixToDXMatrix(&globalBoneBaseMatrix, fbxGlobalBoneBaseMatrix);
 
 				Bone bone;
 				bone.name = boneName;
 				bone.globalBoneBaseMatrix = globalBoneBaseMatrix;
 				bone.boneIndex = boneIndex;
-				bone.fbxNode = fbxNode;
+				bone.fbxNode = fbxCluster->GetLink();
 
 				model->skeleton->bones.push_back(bone);
 			}
@@ -336,7 +343,7 @@ void MeshImporter::LoadWeight(FbxNode* fbxNode, MeshEntry* mesh)
 	}
 
 	// Deployed in the index
-	for (unsigned int i = 0; i < mesh->vertices.size(); i++)
+	for (unsigned int i = 0; i < mesh->numVertices; i++)
 	{
 		mesh->vertices[i].boneIndices.x = tmpWeightList[mesh->indices[i]].boneWeight[0].first;
 		mesh->vertices[i].boneIndices.y = tmpWeightList[mesh->indices[i]].boneWeight[1].first;
@@ -421,11 +428,13 @@ void const MeshImporter::LoadTexture(const char* fileName, MeshEntry* mesh, ID3D
 	PrintTab("Start load texture file");
 	PrintTab(fileName);
 
-	string path = "Assets\\starwars-millennium-falcon\\";
+	string path = "Assets\\WalkingMan\\";
 	//string path("Assets\\farm_house\\Textures\\");
 	//string path = "Assets\\Wooden_House\\";
+	//Assets\\starwars-millennium-falcon\\
 
 	//fileName = "Farmhouse Texture.jpg";
+	fileName = "Texture.jpg";
 	string fileNameStr(fileName);
 
 	// For testing

@@ -39,6 +39,7 @@ namespace ModelImporter
 		string name;
 		//FbxAMatrix globalBindposeInverseMatrix;
 		XMFLOAT4X4 globalBoneBaseMatrix;
+		//XMMATRIX globalBoneBaseMatrix;
 		FbxNode* fbxNode;
 	};
 
@@ -54,7 +55,7 @@ namespace ModelImporter
 	{
 	public:
 		void InitResources(ID3D11Device3* device);
-		XMFLOAT4X4 GetMeshMatrix(float frame);
+		XMFLOAT4X4 GetMeshMatrix(unsigned int frame);
 
 		unsigned int numIndices;
 		unsigned int numVertices;
@@ -80,8 +81,8 @@ namespace ModelImporter
 		void Update(StepTimer const& timer);
 		void Release();
 
+		unsigned short numMesh;
 		XMFLOAT4X4 modelMatrix;
-
 		Skeleton* skeleton;
 		vector<MeshEntry> entries;
 		AnimationConstantBuffer animMatrixBufferData;

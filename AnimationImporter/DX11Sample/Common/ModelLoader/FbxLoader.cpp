@@ -76,11 +76,23 @@ void FbxLoader::LoadFbxModel(const char* fileName, ModelObj* model, ID3D11Device
 		}
 	}
 
-	meshImporter = new MeshImporter(model);
-	animImporter = new AnimationImporter(model);
+	// Convert axis system to DirectX
+	// Does not convert right hand sys to left hand sys
+	/*FbxAxisSystem sceneAxisSystem = scene->GetGlobalSettings().GetAxisSystem();
+	FbxAxisSystem myAxisSystem(FbxAxisSystem::DirectX);
 
-	meshImporter->LoadMesh(scene, device, context);
+	if (sceneAxisSystem != myAxisSystem)
+	{
+		PrintTab("Converted to DirectX axis system");
+
+		myAxisSystem.ConvertScene(scene);
+	}*/
+
+	meshImporter = new MeshImporter(model);
+	//animImporter = new AnimationImporter(model);
+
 	//animImporter->DisplayAnimation(scene, importer);
+	meshImporter->LoadMesh(scene, device, context);
 	
 	//fbxManager->Destroy();
 

@@ -24,7 +24,9 @@ namespace DX11Sample
 	// Animation transform data
 	struct AnimationConstantBuffer
 	{
+		XMFLOAT4X4 meshMatrix;
 		XMFLOAT4X4 meshBoneMatrices[MAXBONE];
+		//XMMATRIX meshBoneMatrices[MAXBONE];
 	};
 
 	// Used to send per-vertex data to the vertex shader.

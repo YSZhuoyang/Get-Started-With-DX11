@@ -9,6 +9,7 @@ cbuffer ModelViewProjectionConstantBuffer : register(b0)
 // A constant buffer storing animation bone data
 cbuffer AnimationConstantBuffer : register(b1)
 {
+	matrix meshMatrix;
 	matrix meshBoneMatrices[50];
 }
 
@@ -42,9 +43,10 @@ PixelShaderInput main(VertexShaderInput input)
 		meshBoneMatrices[input.boneIndices.y] * input.weights.y +
 		meshBoneMatrices[input.boneIndices.z] * input.weights.z +
 		meshBoneMatrices[input.boneIndices.w] * input.weights.w;
-	
-	pos = mul(pos, boneTransform);
 
+	pos = mul(pos, meshMatrix);
+	pos = mul(pos, boneTransform);
+	
 	// Transform the vertex position into projected space.
 	pos = mul(pos, model);
 	pos = mul(pos, view);
