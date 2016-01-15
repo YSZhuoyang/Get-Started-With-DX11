@@ -45,7 +45,7 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 		fovAngleY,
 		aspectRatio,
 		0.01f,
-		10000.0f
+		100.0f
 		);
 
 	XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
@@ -58,7 +58,7 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 		);
 
 	// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
-	static const XMVECTORF32 eye = { 0.0f, 15.0f, 20.0f, 0.0f };//{ 0.0f, 0.7f, 3.0f, 0.0f };
+	static const XMVECTORF32 eye = { 0.0f, 20.0f, 20.0f, 0.0f };//{ 0.0f, 0.7f, 3.0f, 0.0f };
 	//static const XMVECTORF32 eye = { 1.0f, 2.0f, 10.5f, 0.0f };
 	static const XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
 	//static const XMVECTORF32 at = { 1.0f, 1.0f, 1.0f, 0.0f };
@@ -163,9 +163,14 @@ void Sample3DSceneRenderer::Render()
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources()
 {
+	string path = "Assets\\WalkingMan\\";
+	string fileName = "WalkingMan.fbx";
+
 	// Test object loader
-	fbxLoader.LoadFbxModel("Assets\\WalkingMan\\WalkingMan.fbx",
-		&model, 
+	fbxLoader.LoadFbxModel(
+		path.c_str(),
+		fileName.c_str(),
+		&model,
 		m_deviceResources->GetD3DDevice(),
 		m_deviceResources->GetD3DDeviceContext());
 	//Assets\\starwars-millennium-falcon\\starwars-millennium-falcon.fbx

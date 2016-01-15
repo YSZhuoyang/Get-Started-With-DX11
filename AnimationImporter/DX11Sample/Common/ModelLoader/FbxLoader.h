@@ -13,7 +13,11 @@ namespace ModelImporter
 
 		void CreateFbxResources();
 		void ReleaseFbxResources();
-		void LoadFbxModel(const char* fileName, ModelObj* model, ID3D11Device3* device,
+		void LoadFbxModel(
+			string path,
+			string fileName,
+			ModelObj* model, 
+			ID3D11Device3* device,
 			ID3D11DeviceContext3* context);
 
 	private:

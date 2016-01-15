@@ -30,9 +30,14 @@ namespace ModelImporter
 		void LoadWeight(FbxMesh* fbxMesh, MeshEntry* mesh);
 		void LoadMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* device,
 			ID3D11DeviceContext3* context);
+		void ReverseWindingOrder(vector<Vertex>& vertices);
 		// Put into Utilities file
-		void const LoadTexture(const char* fileName, MeshEntry* mesh, ID3D11Device3* device,
-			ID3D11DeviceContext3* context);
+		/*void const LoadTexture(
+			const char* path,
+			const char* fileName,
+			MeshEntry* mesh,
+			ID3D11Device3* device,
+			ID3D11DeviceContext3* context);*/
 
 	private:
 		unsigned short numNodes;

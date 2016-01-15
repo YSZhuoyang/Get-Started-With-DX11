@@ -30,28 +30,23 @@ void MeshImporter::LoadMesh(FbxScene* scene, ID3D11Device3* device,
 	// Obtain root node
 	FbxNode* root = scene->GetRootNode();
 
-	assert(scene->GetPoseCount() == 1);
+	//assert(scene->GetPoseCount() == 1);
+	//model->fbxPose = scene->GetPose(0);
 
-	model->fbxPose = scene->GetPose(0);
-	
 	if (root)
 	{
 		// Root node is included
-		numNodes = root->GetChildCount(true) + 1;
-
 		model->numMesh = scene->GetMemberCount<FbxMesh>();
 		model->entries.clear();
 		model->entries.reserve(model->numMesh);
 
-		PrintTab("Number of nodes: " + to_string(numNodes));
+		PrintTab("Number of nodes: " + to_string(root->GetChildCount(true) + 1));
 
-		//FbxAMatrix fbxGlobalRootTransform = root->EvaluateGlobalTransform();
-		
-		/*for (int r = 0; r < 4; r++)
-			for (int c = 0; c < 4; c++)
-			{
-				model->globalRootTransform.m[r][c] = fbxGlobalRootTransform.mData[r][c];
-			}*/
+		// Retrieve model matrix
+		/*FbxAMatrix fbxGlobalRootTransform = root->EvaluateGlobalTransform();
+		XMFLOAT4X4 globalRootTransform;
+
+		ConvertFbxAMatrixToDXMatrix(&globalRootTransform, fbxGlobalRootTransform);*/
 
 		LoadNodeMesh(root, device, context);
 	}
@@ -120,20 +115,11 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		FbxAMatrix fbxGlobalMeshBaseMatrix = node->EvaluateGlobalTransform().Inverse().Transpose();
 		XMFLOAT4X4 globalMeshBaseMatrix;
 
-		for (int r = 0; r < 4; r++)
-		{
-			//PrintTab("Global mesh base mat: " + to_string(fbxGlobalMeshBaseMatrix.mData[r][0]));
-
-			for (int c = 0; c < 4; c++)
-			{
-				globalMeshBaseMatrix.m[r][c] = (float)fbxGlobalMeshBaseMatrix.mData[r][c];
-			}
-		}
-
 		// To be considered when importing Maya fbx model
-		//FbxAMatrix geoMatrix = GetTransformMatrix(node);
+		FbxAMatrix geometricTransform = GetTransformMatrix(node);
+		fbxGlobalMeshBaseMatrix *= geometricTransform;
 
-		//ConvertFbxAMatrixToDXMatrix(&globalMeshBaseMatrix, fbxGlobalMeshBaseMatrix);
+		ConvertFbxAMatrixToDXMatrix(&globalMeshBaseMatrix, fbxGlobalMeshBaseMatrix);
 
 		MeshEntry mesh;
 		mesh.vertices = vertices;
@@ -150,11 +136,8 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 		LoadWeight(fbxMesh, &mesh);
 
 		// Set to be clockwise, must be done after reading uvs, normals, weights and etc
-		for (auto it = mesh.vertices.begin(); it != mesh.vertices.end(); it += 3)
-		{
-			swap(*it, *(it + 2));
-		}
-
+		ReverseWindingOrder(mesh.vertices);
+		
 		model->entries.push_back(mesh);
 	}
 
@@ -163,6 +146,14 @@ void MeshImporter::LoadNodeMesh(FbxNode* node, ID3D11Device3* device,
 	for (int i = 0; i < numChild; i++)
 	{
 		LoadNodeMesh(node->GetChild(i), device, context);
+	}
+}
+
+void MeshImporter::ReverseWindingOrder(vector<Vertex>& vertices)
+{
+	for (auto it = vertices.begin(); it != vertices.end(); it += 3)
+	{
+		swap(*it, *(it + 2));
 	}
 }
 
@@ -271,6 +262,12 @@ void MeshImporter::LoadWeight(FbxMesh* fbxMesh, MeshEntry* mesh)
 	
 	if (numSkin == 0)
 	{
+		for (auto& vertex : mesh->vertices)
+		{
+			vertex.boneIndices = {0, 0, 0, 0};
+			vertex.weights = {1.0f, 0.0f, 0.0f, 0.0f};
+		}
+
 		return;
 	}
 
@@ -331,11 +328,13 @@ void MeshImporter::LoadWeight(FbxMesh* fbxMesh, MeshEntry* mesh)
 				fbxCluster->GetTransformMatrix(referenceGlobalInitPosition);
 				fbxCluster->GetTransformLinkMatrix(clusterGlobalInitPosition);
 
+				// To be considered when importing Maya fbx model
+				FbxAMatrix geometricTransform = GetTransformMatrix(fbxCluster->GetLink());
+				referenceGlobalInitPosition *= geometricTransform;
+
 				fbxGlobalBoneBaseMatrix = clusterGlobalInitPosition.Inverse() * referenceGlobalInitPosition;
 
-				// To be considered when importing Maya fbx model
-				//FbxAMatrix geoMatrix = GetTransformMatrix(fbxCluster->GetLink());
-
+				// Store bone data
 				Bone bone;
 				bone.name = boneName;
 				bone.boneIndex = boneIndex;
@@ -397,7 +396,7 @@ void MeshImporter::LoadMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* 
 						const char* texture_name = texture->GetName();
 
 						// Load files
-						LoadTexture(texture_name, mesh, device, context);
+						LoadTexture(model->path.c_str(), texture_name, mesh, isTextured, device, context);
 
 						PrintTab(to_string(layered_texture_count) + " Layered textures loaded!" +
 							"Number of layers: " + to_string(lcount));
@@ -415,10 +414,10 @@ void MeshImporter::LoadMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* 
 						FbxCast<FbxTexture>(prop.GetSrcObject<FbxTexture>(j));
 					// Then, you can get all the properties of the texture, include its name
 					const char* texture_name = texture->GetName();
-
+					
 					// Load file
-					LoadTexture(texture_name, mesh, device, context);
-
+					LoadTexture(model->path.c_str(), texture_name, mesh, isTextured, device, context);
+					
 					PrintTab(to_string(texture_count) + " Single texture loaded!");
 				}
 			}
@@ -426,46 +425,3 @@ void MeshImporter::LoadMaterials(FbxNode* node, MeshEntry* mesh, ID3D11Device3* 
 	}
 }
 
-// Put into Utilities file
-void const MeshImporter::LoadTexture(const char* fileName, MeshEntry* mesh, ID3D11Device3* device,
-	ID3D11DeviceContext3* context)
-{
-	PrintTab("Start load texture file");
-	PrintTab(fileName);
-
-	string path = "Assets\\WalkingMan\\";
-	//string path("Assets\\farm_house\\Textures\\");
-	//string path = "Assets\\Wooden_House\\";
-	//Assets\\starwars-millennium-falcon\\
-
-	//fileName = "Farmhouse Texture.jpg";
-	fileName = "Texture.jpg";
-	string fileNameStr(fileName);
-
-	// For testing
-	/*if (fileNameStr.find(".png") == -1)
-	{
-	fileNameStr += ".png";
-	}*/
-
-	HRESULT hr = CreateWICTextureFromFile(device, context, GetWC((path + fileNameStr).c_str()),
-		nullptr, mesh->srv.GetAddressOf());
-
-	if (FAILED(hr))
-	{
-		// Try both uppercase and lowercase
-		HRESULT hr2 = CreateWICTextureFromFile(device, context,
-			GetWC((path + GetLower(fileNameStr.c_str())).c_str()),
-			nullptr, mesh->srv.GetAddressOf());
-
-		if (FAILED(hr2))
-		{
-			// Set a breakpoint on this line to catch Win32 API errors.
-			//throw Platform::Exception::CreateException(hr);
-
-			isTextured = false;
-		}
-	}
-
-	PrintTab("End load texture file");
-}

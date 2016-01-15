@@ -32,14 +32,12 @@ namespace ModelImporter
 	struct Bone
 	{
 	public:
-		XMFLOAT4X4 GetBoneMatrix(unsigned int frame, FbxPose* fbxPose);
+		XMFLOAT4X4 GetBoneMatrix(unsigned int frame);
 
 		int boneIndex;
 		int parentIndex;
 		string name;
 		FbxAMatrix globalBindposeInverseMatrix;
-		//XMFLOAT4X4 globalBoneBaseMatrix;
-		//XMMATRIX globalBoneBaseMatrix;
 		FbxNode* fbxNode;
 	};
 
@@ -77,20 +75,28 @@ namespace ModelImporter
 		ModelObj();
 		void InitMesh(ID3D11Device3* device);
 		void InitAnimationData(ID3D11Device3* device);
-		void ComputeClusterDeformation(
+		/*void ComputeClusterDeformation(
 			FbxMesh* pMesh,
 			FbxCluster* pCluster,
 			FbxAMatrix& pVertexTransformMatrix,
 			FbxTime pTime,
-			FbxPose* pPose);
-		
+			FbxPose* pPose);*/
 		void Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState);
 		void Update(StepTimer const& timer);
 		void Release();
 
+		// Animation data
+		FbxTime start;
+		FbxTime end;
+		unsigned int duration;
+
+		// file info
+		string fileName;
+		string path;
+
 		unsigned short numMesh;
 		XMFLOAT4X4 modelMatrix;
-		FbxPose* fbxPose;
+		//FbxPose* fbxPose;
 		Skeleton* skeleton;
 		vector<MeshEntry> entries;
 		AnimationConstantBuffer animMatrixBufferData;
@@ -105,8 +111,8 @@ namespace ModelImporter
 		// Cached pointer to device resources.
 		//std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
-		bool triangulated;
-		unsigned short numNodes;
+		//bool triangulated;
+		//unsigned short numNodes;
 
 		//ID3D11Device3* device;
 		//ID3D11DeviceContext3* context;

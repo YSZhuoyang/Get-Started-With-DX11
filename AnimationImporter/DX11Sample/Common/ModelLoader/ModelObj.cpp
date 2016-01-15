@@ -13,8 +13,8 @@ using namespace Utilities;
 using namespace std;
 using namespace Windows;
 
-ModelObj::ModelObj() :
-	triangulated(true)
+ModelObj::ModelObj()// :
+	//triangulated(true)
 {
 	//device = m_deviceResources->GetD3DDevice();
 	//context = m_deviceResources->GetD3DDeviceContext();
@@ -82,18 +82,19 @@ Bone* Skeleton::FindBoneByName(string boneName)
 	return nullptr;
 }
 
-XMFLOAT4X4 Bone::GetBoneMatrix(unsigned int frame, FbxPose* fbxPose)
+XMFLOAT4X4 Bone::GetBoneMatrix(unsigned int frame)
 {
+	XMFLOAT4X4 outMatrix;
+
 	FbxTime time;
 	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * (frame % 80));
 
-	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time);// .Transpose();
-	//fbxCurrMatrix = GetGlobalPosition(fbxNode, time, fbxPose);// .Transpose();
+	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time);
+	fbxCurrMatrix = fbxNode->GetAnimationEvaluator()->GetNodeGlobalTransform(fbxNode, time);
+	//FbxAMatrix fbxCurrMatrix = GetGlobalPosition(fbxNode, time, fbxPose);
 
 	FbxAMatrix fbxFinalMatrix = fbxCurrMatrix * globalBindposeInverseMatrix;
 	fbxFinalMatrix = fbxFinalMatrix.Transpose();
-
-	XMFLOAT4X4 outMatrix;
 
 	ConvertFbxAMatrixToDXMatrix(&outMatrix, fbxFinalMatrix);
 
@@ -204,7 +205,7 @@ void ModelObj::InitAnimationData(ID3D11Device3* device)
 }
 
 //Compute the transform matrix that the cluster will transform the vertex.
-void ModelObj::ComputeClusterDeformation(
+/*void ModelObj::ComputeClusterDeformation(
 	FbxMesh* pMesh,
 	FbxCluster* pCluster,
 	FbxAMatrix& pVertexTransformMatrix,
@@ -248,7 +249,7 @@ void ModelObj::ComputeClusterDeformation(
 	lClusterGlobalCurrentPosition * lClusterGlobalInitPosition.Inverse() * lReferenceGlobalInitPosition;
 	}
 	else*/
-	{
+	/*{
 		pCluster->GetTransformMatrix(lReferenceGlobalInitPosition);
 		//lReferenceGlobalCurrentPosition = pGlobalPosition;
 		// Multiply lReferenceGlobalInitPosition by Geometric Transformation
@@ -264,7 +265,7 @@ void ModelObj::ComputeClusterDeformation(
 																			   // Compute the shift of the link relative to the reference.
 		pVertexTransformMatrix = lClusterRelativeCurrentPositionInverse * lClusterRelativeInitPosition;
 	}
-}
+}*/
 
 void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState)
 {
@@ -325,10 +326,10 @@ void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleS
 
 void ModelObj::Update(StepTimer const& timer)
 {
-	for (int i = 0; i < skeleton->bones.size(); i++)
+	for (unsigned int i = 0; i < skeleton->bones.size(); i++)
 	{
 		animMatrixBufferData.boneMatrices[skeleton->bones[i].boneIndex] =
-			skeleton->bones[i].GetBoneMatrix(timer.GetFrameCount(), fbxPose);
+			skeleton->bones[i].GetBoneMatrix(timer.GetFrameCount());
 	}
 
 	animMatrixBufferData.meshMatrix = entries[0].GetMeshMatrix(timer.GetFrameCount());

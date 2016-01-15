@@ -39,17 +39,19 @@ void FbxLoader::ReleaseFbxResources()
 	fbxManager->Destroy();
 }
 
-void FbxLoader::LoadFbxModel(const char* fileName, ModelObj* model, ID3D11Device3* device,
+void FbxLoader::LoadFbxModel(
+	string path, 
+	string fileName,
+	ModelObj* model, 
+	ID3D11Device3* device,
 	ID3D11DeviceContext3* context)
 {
 	PrintTab("Start load file");
 
 	//Clear();
 
-	//model->fbxScene = scene;
-	
 	// Use the first argument as the filename for the importer
-	if (!importer->Initialize(fileName, -1, fbxManager->GetIOSettings()))
+	if (!importer->Initialize((path + fileName).c_str(), -1, fbxManager->GetIOSettings()))
 	{
 		string debug_message = "Call to FbxImporter::Initialize() failed.\n";
 		string error = importer->GetStatus().GetErrorString();
@@ -65,16 +67,19 @@ void FbxLoader::LoadFbxModel(const char* fileName, ModelObj* model, ID3D11Device
 
 	//importer->Destroy();
 
+	FbxGeometryConverter geomConverter(fbxManager);
+
 	if (triangulated)
 	{
 		// Triangulate all geometries
-		FbxGeometryConverter geomConverter(fbxManager);
-
 		if (geomConverter.Triangulate(scene, /*replace*/true))
 		{
 			PrintTab("Triangulated");
 		}
 	}
+
+	// Split meshes per material, so that we only have one material per mesh (for VBO support)
+	//geomConverter.SplitMeshesPerMaterial(scene, /*replace*/true);
 
 	// Convert axis system to DirectX
 	// Does not convert right hand sys to left hand sys
@@ -88,14 +93,32 @@ void FbxLoader::LoadFbxModel(const char* fileName, ModelObj* model, ID3D11Device
 		myAxisSystem.ConvertScene(scene);
 	}*/
 
+	// Get the current scene units (incoming from FBX file)
+	FbxSystemUnit SceneSystemUnit = scene->GetGlobalSettings().GetSystemUnit();
+
+	// If the incoming FBX file is defined in centimeters, we have nothing to do
+	// so we can skip the conversion...
+	if (SceneSystemUnit.GetScaleFactor() != 1.0)
+	{
+		// Force the conversion to centimeters so we make sure
+		// that the scale compensation is correctly adjusted
+		FbxSystemUnit::cm.ConvertScene(scene);
+	}
+	
+	// Do not take scaling into consideration when child inherits parents transformation
+	FbxSystemUnit::ConversionOptions myOptions;
+	myOptions.mConvertRrsNodes = false;
+	FbxSystemUnit::m.ConvertScene(scene, myOptions);
+
+	model->fileName = fileName;
+	model->path = path;
+
 	meshImporter = new MeshImporter(model);
 	//animImporter = new AnimationImporter(model);
 
 	//animImporter->DisplayAnimation(scene, importer);
 	meshImporter->LoadMesh(scene, device, context);
 	
-	//fbxManager->Destroy();
-
 	PrintTab("End load file");
 }
 

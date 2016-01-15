@@ -1,8 +1,5 @@
 #include "pch.h"
 #include "Utilities.h"
-#include "DirectXHelper.h"
-
-using namespace DX;
 
 namespace Utilities
 {
@@ -23,11 +20,11 @@ namespace Utilities
 				// The bind pose is always a global matrix.
 				// If we have a rest pose, we need to check if it is
 				// stored in global or local space.
-				if (pPose->IsBindPose() || !pPose->IsLocalMatrix(lNodeIndex))
+				/*if (pPose->IsBindPose() || !pPose->IsLocalMatrix(lNodeIndex))
 				{
 					lGlobalPosition = GetPoseMatrix(pPose, lNodeIndex);
 				}
-				else
+				else*/
 				{
 					// We have a local matrix, we need to convert it to
 					// a global space matrix.
@@ -44,13 +41,13 @@ namespace Utilities
 							lParentGlobalPosition = GetGlobalPosition(pNode->GetParent(), pTime, pPose);
 						}
 					}
-					FbxAMatrix lLocalPosition = pNode->GetScene()->GetAnimationEvaluator()->GetNodeLocalTransform(pNode, pTime);
+
+					//FbxAMatrix lLocalPosition = pNode->GetScene()->GetAnimationEvaluator()->GetNodeLocalTransform(pNode, pTime);
 					//FbxAnimEvaluator::GetNodeLocalTransform(pNode, pTime);
-					//FbxAMatrix lLocalPosition = GetPoseMatrix(pPose, lNodeIndex);
+					FbxAMatrix lLocalPosition = GetPoseMatrix(pPose, lNodeIndex);
 					lGlobalPosition = lParentGlobalPosition * lLocalPosition;
 				}
 
-				PrintTab("Global bone mat2: ");
 				lPositionFound = true;
 			}
 		}
@@ -102,6 +99,49 @@ namespace Utilities
 				outMatrix->m[r][c] = (float)fbxAMatrix.Get(r, c);
 			}
 		}
+	}
+
+	void const LoadTexture(
+		const char* path,
+		const char* fileName,
+		MeshEntry* mesh,
+		bool& isTextured,
+		ID3D11Device3* device,
+		ID3D11DeviceContext3* context)
+	{
+		PrintTab("Start load texture file");
+		PrintTab(fileName);
+
+		//fileName = "Farmhouse Texture.jpg";
+		fileName = "Texture.jpg";
+		string fileNameStr(fileName);
+
+		// For testing
+		/*if (fileNameStr.find(".png") == -1)
+		{
+		fileNameStr += ".png";
+		}*/
+
+		HRESULT hr = CreateWICTextureFromFile(device, context, GetWC((path + fileNameStr).c_str()),
+			nullptr, mesh->srv.GetAddressOf());
+
+		if (FAILED(hr))
+		{
+			// Try both uppercase and lowercase
+			HRESULT hr2 = CreateWICTextureFromFile(device, context,
+				GetWC((string(path) + GetLower(fileNameStr.c_str())).c_str()),
+				nullptr, mesh->srv.GetAddressOf());
+
+			if (FAILED(hr2))
+			{
+				// Set a breakpoint on this line to catch Win32 API errors.
+				//throw Platform::Exception::CreateException(hr);
+
+				isTextured = false;
+			}
+		}
+
+		PrintTab("End load texture file");
 	}
 }
 

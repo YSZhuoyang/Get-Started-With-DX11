@@ -47,11 +47,6 @@ PixelShaderInput main(VertexShaderInput input)
 	pos = mul(pos, meshMatrix);
 	pos = mul(pos, boneTransform);
 
-	// Scaling problem
-	pos.x = pos.x * 0.01f;
-	pos.y = pos.y * 0.01f;
-	pos.z = pos.z * 0.01f;
-
 	// Transform the vertex position into projected space.
 	pos = mul(pos, model);
 	pos = mul(pos, view);
