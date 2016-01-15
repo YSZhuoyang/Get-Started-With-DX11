@@ -26,26 +26,15 @@ void VertexWeight::AddBoneData(unsigned int index, float weight)
 {
 	for (int i = 0; i < MAXBONEPERVERTEX; i++)
 	{
-		if (boneWeight[i].second == 0.0f)
-		{
-			boneWeight[i].first = index;
-			boneWeight[i].second = weight;
-
-			break;
-		}
-	}
-
-	/*for (int i = 0; i < MAXBONEPERVERTEX; i++)
-	{
 		// Add data in descending order
 		if (boneWeight[i].second < weight)
 		{
 			for (int j = MAXBONEPERVERTEX - 2; j >= i; j--)
 			{
-				//boneWeight[j + 1] = boneWeight[j];
+				boneWeight[j + 1] = boneWeight[j];
 
-				boneWeight[j + 1].first = boneWeight[j].first;
-				boneWeight[j + 1].second = boneWeight[j].second;
+				//boneWeight[j + 1].first = boneWeight[j].first;
+				//boneWeight[j + 1].second = boneWeight[j].second;
 			}
 
 			boneWeight[i].first = index;
@@ -53,7 +42,7 @@ void VertexWeight::AddBoneData(unsigned int index, float weight)
 
 			break;
 		}
-	}*/
+	}
 }
 
 void VertexWeight::Normalize()
@@ -93,31 +82,20 @@ Bone* Skeleton::FindBoneByName(string boneName)
 	return nullptr;
 }
 
-XMFLOAT4X4 Bone::GetBoneMatrix(unsigned int frame)
+XMFLOAT4X4 Bone::GetBoneMatrix(unsigned int frame, FbxPose* fbxPose)
 {
 	FbxTime time;
 	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * (frame % 80));
 
-	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time).Transpose();
+	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time);// .Transpose();
+	//fbxCurrMatrix = GetGlobalPosition(fbxNode, time, fbxPose);// .Transpose();
 
-	XMFLOAT4X4 currMatrix;
-	
-	for (int r = 0; r < 4; r++)
-		for (int c = 0; c < 4; c++)
-		{
-			currMatrix.m[r][c] = (float)fbxCurrMatrix.mData[r][c];
+	FbxAMatrix fbxFinalMatrix = fbxCurrMatrix * globalBindposeInverseMatrix;
+	fbxFinalMatrix = fbxFinalMatrix.Transpose();
 
-			//PrintTab("Global bone mat: " + to_string(currMatrix.m[r][c]));
-		}
-
-	//PrintTab("Global bone mat2: " + to_string(currMatrix.m[0][0]));
-
-	//ConvertFbxAMatrixToDXMatrix(&currMatrix, fbxCurrMatrix);
-	
-	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&globalBoneBaseMatrix), XMLoadFloat4x4(&currMatrix));//XMLoadFloat4x4(&currMatrix) * XMLoadFloat4x4(&globalBoneBaseMatrix); //
 	XMFLOAT4X4 outMatrix;
-	
-	XMStoreFloat4x4(&outMatrix, matrix);//XMMatrixTranspose(matrix)
+
+	ConvertFbxAMatrixToDXMatrix(&outMatrix, fbxFinalMatrix);
 
 	return outMatrix;
 }
@@ -167,15 +145,7 @@ XMFLOAT4X4 MeshEntry::GetMeshMatrix(unsigned int frame)
 	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time).Transpose();
 	XMFLOAT4X4 currMatrix;
 
-	for (int r = 0; r < 4; r++)
-		for (int c = 0; c < 4; c++)
-		{
-			currMatrix.m[r][c] = (float)fbxCurrMatrix.mData[r][c];
-
-			//PrintTab("Global mesh mat: " + to_string(currMatrix.m[r][c]));
-		}
-	
-	//ConvertFbxAMatrixToDXMatrix(&currMatrix, fbxCurrMatrix);
+	ConvertFbxAMatrixToDXMatrix(&currMatrix, fbxCurrMatrix);
 
 	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&globalMeshBaseMatrix), XMLoadFloat4x4(&currMatrix));//XMLoadFloat4x4(&currMatrix) * XMLoadFloat4x4(&globalMeshBaseMatrix);
 	XMFLOAT4X4 outMatrix;
@@ -209,16 +179,13 @@ void ModelObj::InitAnimationData(ID3D11Device3* device)
 	{
 		if (i < skeleton->bones.size())
 		{
-			//XMMatrixMultiply(StoreMatrix);
-			//animMatrixBufferData.meshBoneMatrices[i] = globalRootTransform * skeleton->bones[i].globalBoneBaseMatrix;
-			
-			animMatrixBufferData.meshBoneMatrices[i] = skeleton->bones[i].globalBoneBaseMatrix;
-			
-			//PrintTab("Bone Mat: " + to_string(animMatrixBufferData.meshBoneMatrices[i].m[0][0]));
+			ConvertFbxAMatrixToDXMatrix(
+				&animMatrixBufferData.boneMatrices[i], 
+				skeleton->bones[i].globalBindposeInverseMatrix);
 		}
 		else
 		{
-			//XMStoreFloat4x4(&animMatrixBufferData.meshBoneMatrices[i], XMMatrixIdentity());
+			XMStoreFloat4x4(&animMatrixBufferData.boneMatrices[i], XMMatrixIdentity());
 		}
 	}
 
@@ -234,6 +201,69 @@ void ModelObj::InitAnimationData(ID3D11Device3* device)
 			&animConstantBuffer
 			)
 		);
+}
+
+//Compute the transform matrix that the cluster will transform the vertex.
+void ModelObj::ComputeClusterDeformation(
+	FbxMesh* pMesh,
+	FbxCluster* pCluster,
+	FbxAMatrix& pVertexTransformMatrix,
+	FbxTime pTime,
+	FbxPose* pPose)
+{
+	FbxCluster::ELinkMode lClusterMode = pCluster->GetLinkMode();
+	FbxAMatrix lReferenceGlobalInitPosition;
+	//FbxAMatrix lReferenceGlobalCurrentPosition;
+	FbxAMatrix lAssociateGlobalInitPosition;
+	FbxAMatrix lAssociateGlobalCurrentPosition;
+	FbxAMatrix lClusterGlobalInitPosition;
+	FbxAMatrix lClusterGlobalCurrentPosition;
+	FbxAMatrix lReferenceGeometry;
+	FbxAMatrix lAssociateGeometry;
+	FbxAMatrix lClusterGeometry;
+	FbxAMatrix lClusterRelativeInitPosition;
+	FbxAMatrix lClusterRelativeCurrentPositionInverse;
+
+	/*if (lClusterMode == FbxCluster::eAdditive && pCluster->GetAssociateModel())
+	{
+	pCluster->GetTransformAssociateModelMatrix(lAssociateGlobalInitPosition);
+	// Geometric transform of the model
+	lAssociateGeometry = GetGeometry(pCluster->GetAssociateModel());
+	lAssociateGlobalInitPosition *= lAssociateGeometry;
+	lAssociateGlobalCurrentPosition = GetGlobalPosition(pCluster->GetAssociateModel(), pTime, pPose);
+	pCluster->GetTransformMatrix(lReferenceGlobalInitPosition);
+	// Multiply lReferenceGlobalInitPosition by Geometric Transformation
+	lReferenceGeometry = GetGeometry(pMesh->GetNode());
+	lReferenceGlobalInitPosition *= lReferenceGeometry;
+	//lReferenceGlobalCurrentPosition = pGlobalPosition;
+	// Get the link initial global position and the link current global position.
+	pCluster->GetTransformLinkMatrix(lClusterGlobalInitPosition);
+	// Multiply lClusterGlobalInitPosition by Geometric Transformation
+	lClusterGeometry = GetGeometry(pCluster->GetLink());
+	lClusterGlobalInitPosition *= lClusterGeometry;
+	lClusterGlobalCurrentPosition = GetGlobalPosition(pCluster->GetLink(), pTime, pPose);
+	// Compute the shift of the link relative to the reference.
+	//ModelM-1 * AssoM * AssoGX-1 * LinkGX * LinkM-1*ModelM
+	pVertexTransformMatrix = lReferenceGlobalInitPosition.Inverse() * lAssociateGlobalInitPosition * lAssociateGlobalCurrentPosition.Inverse() *
+	lClusterGlobalCurrentPosition * lClusterGlobalInitPosition.Inverse() * lReferenceGlobalInitPosition;
+	}
+	else*/
+	{
+		pCluster->GetTransformMatrix(lReferenceGlobalInitPosition);
+		//lReferenceGlobalCurrentPosition = pGlobalPosition;
+		// Multiply lReferenceGlobalInitPosition by Geometric Transformation
+		lReferenceGeometry = GetTransformMatrix(pMesh->GetNode());
+		lReferenceGlobalInitPosition *= lReferenceGeometry;
+		// Get the link initial global position and the link current global position.
+		pCluster->GetTransformLinkMatrix(lClusterGlobalInitPosition);
+		lClusterGlobalCurrentPosition = GetGlobalPosition(pCluster->GetLink(), pTime, pPose);
+		// Compute the initial position of the link relative to the reference.
+		lClusterRelativeInitPosition = lClusterGlobalInitPosition.Inverse() * lReferenceGlobalInitPosition;
+		// Compute the current position of the link relative to the reference.
+		lClusterRelativeCurrentPositionInverse = lClusterGlobalCurrentPosition;// lReferenceGlobalCurrentPosition.Inverse() * lClusterGlobalCurrentPosition;
+																			   // Compute the shift of the link relative to the reference.
+		pVertexTransformMatrix = lClusterRelativeCurrentPositionInverse * lClusterRelativeInitPosition;
+	}
 }
 
 void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleState)
@@ -297,8 +327,8 @@ void ModelObj::Update(StepTimer const& timer)
 {
 	for (int i = 0; i < skeleton->bones.size(); i++)
 	{
-		animMatrixBufferData.meshBoneMatrices[skeleton->bones[i].boneIndex] =
-			skeleton->bones[i].GetBoneMatrix(timer.GetFrameCount());
+		animMatrixBufferData.boneMatrices[skeleton->bones[i].boneIndex] =
+			skeleton->bones[i].GetBoneMatrix(timer.GetFrameCount(), fbxPose);
 	}
 
 	animMatrixBufferData.meshMatrix = entries[0].GetMeshMatrix(timer.GetFrameCount());

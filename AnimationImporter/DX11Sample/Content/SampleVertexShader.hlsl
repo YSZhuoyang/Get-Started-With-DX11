@@ -10,7 +10,7 @@ cbuffer ModelViewProjectionConstantBuffer : register(b0)
 cbuffer AnimationConstantBuffer : register(b1)
 {
 	matrix meshMatrix;
-	matrix meshBoneMatrices[50];
+	matrix boneMatrices[50];
 }
 
 // Per-vertex data used as input to the vertex shader.
@@ -39,14 +39,19 @@ PixelShaderInput main(VertexShaderInput input)
 
 	// Test animations
 	matrix boneTransform = 
-		meshBoneMatrices[input.boneIndices.x] * input.weights.x +
-		meshBoneMatrices[input.boneIndices.y] * input.weights.y +
-		meshBoneMatrices[input.boneIndices.z] * input.weights.z +
-		meshBoneMatrices[input.boneIndices.w] * input.weights.w;
+		boneMatrices[input.boneIndices.x] * input.weights.x +
+		boneMatrices[input.boneIndices.y] * input.weights.y +
+		boneMatrices[input.boneIndices.z] * input.weights.z +
+		boneMatrices[input.boneIndices.w] * input.weights.w;
 
 	pos = mul(pos, meshMatrix);
 	pos = mul(pos, boneTransform);
-	
+
+	// Scaling problem
+	pos.x = pos.x * 0.01f;
+	pos.y = pos.y * 0.01f;
+	pos.z = pos.z * 0.01f;
+
 	// Transform the vertex position into projected space.
 	pos = mul(pos, model);
 	pos = mul(pos, view);

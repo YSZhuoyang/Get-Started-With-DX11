@@ -29,6 +29,10 @@ void MeshImporter::LoadMesh(FbxScene* scene, ID3D11Device3* device,
 	
 	// Obtain root node
 	FbxNode* root = scene->GetRootNode();
+
+	assert(scene->GetPoseCount() == 1);
+
+	model->fbxPose = scene->GetPose(0);
 	
 	if (root)
 	{
@@ -281,6 +285,12 @@ void MeshImporter::LoadWeight(FbxMesh* fbxMesh, MeshEntry* mesh)
 	for (int i = 0; i < numCluster; i++)
 	{
 		FbxCluster* fbxCluster = fbxSkin->GetCluster(i);
+
+		if (!fbxCluster->GetLink())
+		{
+			continue;
+		}
+
 		unsigned int boneIndex = model->skeleton->bones.size();
 
 		assert(fbxCluster->GetLinkMode() == FbxCluster::eNormalize);
@@ -313,29 +323,24 @@ void MeshImporter::LoadWeight(FbxMesh* fbxMesh, MeshEntry* mesh)
 				}*/
 
 				// Read animation bone matrix
-				XMFLOAT4X4 globalBoneBaseMatrix;
-				FbxAMatrix fbxGlobalBoneBaseMatrix = fbxCluster->GetLink()->EvaluateGlobalTransform().Inverse().Transpose();
+				FbxAMatrix fbxGlobalBoneBaseMatrix;// = fbxCluster->GetLink()->EvaluateGlobalTransform().Inverse().Transpose();
 
-				for (int r = 0; r < 4; r++)
-				{
-					//PrintTab("Global mat bone: " + to_string(fbxGlobalBoneBaseMatrix.mData[r][0]));
+				FbxAMatrix referenceGlobalInitPosition;
+				FbxAMatrix clusterGlobalInitPosition;
 
-					for (int c = 0; c < 4; c++)
-					{
-						globalBoneBaseMatrix.m[r][c] = (float)fbxGlobalBoneBaseMatrix.mData[r][c];
-					}
-				}
+				fbxCluster->GetTransformMatrix(referenceGlobalInitPosition);
+				fbxCluster->GetTransformLinkMatrix(clusterGlobalInitPosition);
+
+				fbxGlobalBoneBaseMatrix = clusterGlobalInitPosition.Inverse() * referenceGlobalInitPosition;
 
 				// To be considered when importing Maya fbx model
 				//FbxAMatrix geoMatrix = GetTransformMatrix(fbxCluster->GetLink());
-				
-				//ConvertFbxAMatrixToDXMatrix(&globalBoneBaseMatrix, fbxGlobalBoneBaseMatrix);
 
 				Bone bone;
 				bone.name = boneName;
-				bone.globalBoneBaseMatrix = globalBoneBaseMatrix;
 				bone.boneIndex = boneIndex;
 				bone.fbxNode = fbxCluster->GetLink();
+				bone.globalBindposeInverseMatrix = fbxGlobalBoneBaseMatrix;
 
 				model->skeleton->bones.push_back(bone);
 			}
