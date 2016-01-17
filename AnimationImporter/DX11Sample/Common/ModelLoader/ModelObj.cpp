@@ -90,7 +90,6 @@ XMFLOAT4X4 Bone::GetBoneMatrix(unsigned int frame)
 	time.Set(FbxTime::GetOneFrameValue(FbxTime::eFrames60) * (frame % 80));
 
 	FbxAMatrix fbxCurrMatrix = fbxNode->EvaluateGlobalTransform(time);
-	fbxCurrMatrix = fbxNode->GetAnimationEvaluator()->GetNodeGlobalTransform(fbxNode, time);
 	//FbxAMatrix fbxCurrMatrix = GetGlobalPosition(fbxNode, time, fbxPose);
 
 	FbxAMatrix fbxFinalMatrix = fbxCurrMatrix * globalBindposeInverseMatrix;
@@ -137,7 +136,7 @@ void MeshEntry::InitResources(ID3D11Device3* device)
 	PrintTab("End init resources of a mesh");
 }
 
-XMFLOAT4X4 MeshEntry::GetMeshMatrix(unsigned int frame)
+void MeshEntry::UpdateMeshMatrix(unsigned int frame)
 {
 	FbxTime time;
 	
@@ -149,11 +148,12 @@ XMFLOAT4X4 MeshEntry::GetMeshMatrix(unsigned int frame)
 	ConvertFbxAMatrixToDXMatrix(&currMatrix, fbxCurrMatrix);
 
 	XMMATRIX matrix = XMMatrixMultiply(XMLoadFloat4x4(&globalMeshBaseMatrix), XMLoadFloat4x4(&currMatrix));//XMLoadFloat4x4(&currMatrix) * XMLoadFloat4x4(&globalMeshBaseMatrix);
-	XMFLOAT4X4 outMatrix;
+	//XMFLOAT4X4 outMatrix;
 	
-	XMStoreFloat4x4(&outMatrix, matrix);//XMMatrixTranspose(matrix)
+	//XMStoreFloat4x4(&outMatrix, matrix);//XMMatrixTranspose(matrix)
+	XMStoreFloat4x4(&globalMeshTransform, matrix);
 
-	return outMatrix;
+	//return outMatrix;
 }
 
 void ModelObj::InitMesh(ID3D11Device3* device)
@@ -163,11 +163,6 @@ void ModelObj::InitMesh(ID3D11Device3* device)
 	for (unsigned int i = 0; i < entries.size(); i++)
 	{
 		entries[i].InitResources(device);
-
-
-
-		// For testing
-		animMatrixBufferData.meshMatrix = entries[i].globalMeshBaseMatrix;
 	}
 
 	PrintTab("End init mesh");
@@ -274,6 +269,9 @@ void ModelObj::Render(ID3D11DeviceContext3* context, ID3D11SamplerState* sampleS
 
 	for (vector<MeshEntry>::iterator mesh = entries.begin(); mesh != entries.end(); ++mesh)
 	{
+		// Set mesh transform matrix
+		animMatrixBufferData.meshMatrix = mesh->globalMeshTransform;
+
 		// Update constant buffer data
 		context->UpdateSubresource1(
 			animConstantBuffer.Get(),
@@ -332,7 +330,10 @@ void ModelObj::Update(StepTimer const& timer)
 			skeleton->bones[i].GetBoneMatrix(timer.GetFrameCount());
 	}
 
-	animMatrixBufferData.meshMatrix = entries[0].GetMeshMatrix(timer.GetFrameCount());
+	for (unsigned short i = 0; i < numMesh; i++)
+	{
+		entries[i].UpdateMeshMatrix(timer.GetFrameCount());
+	}
 }
 
 void ModelObj::PrintNode(FbxNode* node)

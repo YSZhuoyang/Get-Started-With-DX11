@@ -53,7 +53,7 @@ namespace ModelImporter
 	{
 	public:
 		void InitResources(ID3D11Device3* device);
-		XMFLOAT4X4 GetMeshMatrix(unsigned int frame);
+		void UpdateMeshMatrix(unsigned int frame);
 
 		unsigned int numIndices;
 		unsigned int numVertices;
@@ -67,6 +67,7 @@ namespace ModelImporter
 
 		FbxNode* fbxNode;
 		XMFLOAT4X4 globalMeshBaseMatrix;
+		XMFLOAT4X4 globalMeshTransform;
 	};
 
 	class ModelObj
